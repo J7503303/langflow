@@ -1,0 +1,28 @@
+services:
+  langflow:
+    image: langflow-oracle:latest
+    container_name: gmedical-ai-assistant-langflow
+    ports:
+      - "7800:7860"
+    environment:
+      - LANGFLOW_HOST=0.0.0.0
+      - LANGFLOW_PORT=7860
+      - LANGFLOW_CONFIG_DIR=/app/data/config
+      - LANGFLOW_DATABASE_URL=sqlite:///./data/database/langflow.db
+      - LANGFLOW_LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    networks:
+      ai-assistant-network:
+        aliases:
+          - ai-assistant-flow
+    labels:
+      - "com.docker.compose.project=gmedical-ai-assistant"
+      - "com.docker.compose.service=langflow"
+      - "group=gmedical-ai-assistant"
+
+networks:
+  ai-assistant-network:
+    external: true
+    name: ai-assistant-network
