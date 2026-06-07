@@ -1,3 +1,4 @@
+import math
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -8,7 +9,7 @@ from uuid import UUID
 import numpy as np
 import pandas as pd
 from langchain_core.documents import Document
-from loguru import logger
+from lfx.log.logger import logger
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
 
@@ -119,7 +120,11 @@ def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: 
 
 def _serialize_primitive(obj: Any, *_) -> Any:
     """Handle primitive types without conversion."""
-    if obj is None or isinstance(obj, int | float | bool | complex):
+    if obj is None or isinstance(obj, bool | int | complex):
+        return obj
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
         return obj
     return UNSERIALIZABLE_SENTINEL
 
@@ -270,6 +275,18 @@ def serialize(
     """
     if obj is None:
         return None
+
+    # Fast-path common immutable primitives when no truncation/limits requested.
+    # This avoids the relatively expensive dispatcher for the common case.
+    # Non-finite floats (NaN, Inf) are excluded so the dispatcher can sanitize them.
+    no_limits = max_length is None and max_items is None
+    is_simple_primitive = isinstance(obj, (str, int, float, bool))
+
+    if no_limits and not to_str and is_simple_primitive:
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return None
+        return obj
+
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)

@@ -8,8 +8,8 @@ import sys
 import time
 
 import pytest
-from langflow.components.agents import AgentComponent
 from langflow.components.data import APIRequestComponent
+from langflow.components.models_and_agents import AgentComponent  # Backwards compatibility alias
 from langflow.components.openai import OpenAIModelComponent
 
 
@@ -112,7 +112,7 @@ class TestDynamicImportIntegration:
 
         # Time the import of a large module
         start_time = time.time()
-        from langflow.components import vectorstores
+        from langflow.components import chroma
 
         import_time = time.time() - start_time
 
@@ -124,7 +124,7 @@ class TestDynamicImportIntegration:
 
         # Now access a component - this should trigger loading
         start_time = time.time()
-        chroma_component = vectorstores.ChromaVectorStoreComponent
+        chroma_component = chroma.ChromaVectorStoreComponent
         access_time = time.time() - start_time
 
         assert chroma_component is not None
@@ -175,7 +175,7 @@ class TestDynamicImportIntegration:
         main_dir = dir(components)
         assert "openai" in main_dir
         assert "data" in main_dir
-        assert "agents" in main_dir
+        assert "models_and_agents" in main_dir
 
         openai_dir = dir(openai_components)
         assert "OpenAIModelComponent" in openai_dir
@@ -236,25 +236,25 @@ class TestDynamicImportIntegration:
 
     def test_large_scale_component_access(self):
         """Test accessing many components doesn't cause issues."""
-        from langflow.components import vectorstores
+        from langflow.components import datastax
 
         # Access multiple components rapidly
         components_accessed = []
         component_names = [
-            "ChromaVectorStoreComponent",
-            "PineconeVectorStoreComponent",
-            "FaissVectorStoreComponent",
-            "WeaviateVectorStoreComponent",
-            "QdrantVectorStoreComponent",
+            "AstraDBVectorStoreComponent",
+            "AstraDBChatMemory",
+            "AstraDBToolComponent",
+            "AstraDBCQLToolComponent",
+            "GraphRAGComponent",
         ]
 
         for name in component_names:
-            if hasattr(vectorstores, name):
-                component = getattr(vectorstores, name)
+            if hasattr(datastax, name):
+                component = getattr(datastax, name)
                 components_accessed.append(component)
 
-        # Should have accessed multiple components without issues
-        assert len(components_accessed) > 0
+        # Should have accessed all listed components
+        assert len(components_accessed) == len(component_names)
 
         # All should be different classes
         assert len(set(components_accessed)) == len(components_accessed)
@@ -293,6 +293,61 @@ class TestDynamicImportIntegration:
         assert openai_mod.OpenAIModelComponent is not None
         assert helpers_mod.CalculatorComponent is not None
         assert nested_component is direct_component
+
+    def test_deprecated_astra_assistants_removed(self):
+        """Test that deprecated Astra Assistants components are no longer importable."""
+        from langflow.components import datastax
+
+        removed_components = [
+            "AssistantsCreateAssistant",
+            "AssistantsCreateThread",
+            "AssistantsGetAssistantName",
+            "AssistantsListAssistants",
+            "AssistantsRun",
+            "AstraAssistantManager",
+        ]
+
+        for name in removed_components:
+            assert not hasattr(datastax, name), f"Deprecated component {name} should have been removed"
+
+    def test_datastax_remaining_components_accessible(self):
+        """Test that all non-deprecated datastax components are still accessible."""
+        from langflow.components import datastax
+
+        expected_components = [
+            "AstraDBVectorStoreComponent",
+            "AstraDBChatMemory",
+            "AstraDBToolComponent",
+            "AstraDBCQLToolComponent",
+            "AstraDBGraphVectorStoreComponent",
+            "AstraVectorizeComponent",
+            "GraphRAGComponent",
+            "Dotenv",
+            "GetEnvVar",
+        ]
+
+        for name in expected_components:
+            assert hasattr(datastax, name), f"Component {name} should still be accessible"
+            component = getattr(datastax, name)
+            assert component is not None, f"Component {name} should not be None"
+
+    def test_datastax_dir_excludes_deprecated(self):
+        """Test that dir(datastax) does not list deprecated components."""
+        from langflow.components import datastax
+
+        exported = dir(datastax)
+        deprecated = {
+            "AssistantsCreateAssistant",
+            "AssistantsCreateThread",
+            "AssistantsGetAssistantName",
+            "AssistantsListAssistants",
+            "AssistantsRun",
+            "AstraAssistantManager",
+        }
+
+        assert not deprecated.intersection(exported), (
+            f"Deprecated components still appear in dir(): {deprecated.intersection(exported)}"
+        )
 
 
 if __name__ == "__main__":

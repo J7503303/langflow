@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect } from "react";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
-
 import { cn } from "../../../../../utils/utils";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { CommandItem } from "../../../../ui/command";
@@ -10,6 +8,12 @@ import GlobalVariableModal from "../../../GlobalVariableModal/GlobalVariableModa
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputGlobalComponentType, InputProps } from "../../types";
 import InputComponent from "../inputComponent";
+import {
+  useGlobalVariableValue,
+  useInitialLoad,
+  useUnavailableField,
+} from "./hooks";
+import type { GlobalVariable, GlobalVariableHandlers } from "./types";
 
 export default function InputGlobalComponent({
   display_name,
@@ -23,71 +27,134 @@ export default function InputGlobalComponent({
   placeholder,
   isToolMode = false,
   hasRefreshButton = false,
-}: InputProps<string, InputGlobalComponentType>): JSX.Element {
-  const { data: globalVariables } = useGetGlobalVariables();
-  const unavailableFields = useGlobalVariablesStore(
-    (state) => state.unavailableFields,
+  showParameter = true,
+}: InputProps<string, InputGlobalComponentType>): JSX.Element | null {
+  const {
+    data: globalVariables,
+    isFetchedAfterMount: isGlobalVariablesFetchedAfterMount,
+    isFetching: isGlobalVariablesFetching,
+    isSuccess: isGlobalVariablesFetchSuccessful,
+  } = useGetGlobalVariables();
+
+  // // Safely cast the data to our typed interface
+  const typedGlobalVariables: GlobalVariable[] = globalVariables ?? [];
+  const currentValue = value ?? "";
+  const isDisabled = disabled ?? false;
+  const loadFromDb = load_from_db ?? false;
+
+  // // Extract complex logic into custom hooks
+  const valueExists = useGlobalVariableValue(
+    currentValue,
+    typedGlobalVariables,
+  );
+  const unavailableField = useUnavailableField(display_name, currentValue);
+  const canValidateMissingVariable =
+    isGlobalVariablesFetchSuccessful &&
+    !isGlobalVariablesFetching &&
+    isGlobalVariablesFetchedAfterMount;
+
+  useInitialLoad(
+    isDisabled,
+    loadFromDb,
+    typedGlobalVariables,
+    canValidateMissingVariable,
+    valueExists,
+    unavailableField,
+    handleOnNewValue,
   );
 
-  const initialLoadCompleted = useRef(false);
-
-  const valueExists = useMemo(() => {
-    return (
-      globalVariables?.some((variable) => variable.name === value) ?? false
-    );
-  }, [globalVariables, value]);
-
-  const unavailableField = useMemo(() => {
+  // Clean up when selected variable no longer exists.
+  // Only validate against a successful, settled query result for this mount.
+  // This avoids clearing values during the initial fetch, during background
+  // refetches against cached data, or after failed requests.
+  useEffect(() => {
     if (
-      display_name &&
-      unavailableFields &&
-      Object.keys(unavailableFields).includes(display_name) &&
-      value === ""
+      canValidateMissingVariable &&
+      loadFromDb &&
+      currentValue &&
+      !valueExists &&
+      !isDisabled
     ) {
-      return unavailableFields[display_name];
-    }
-    return null;
-  }, [unavailableFields, display_name]);
-
-  useMemo(() => {
-    if (disabled) {
-      return;
-    }
-
-    if (load_from_db && globalVariables && !valueExists) {
       handleOnNewValue(
         { value: "", load_from_db: false },
         { skipSnapshot: true },
       );
     }
   }, [
-    globalVariables,
-    unavailableFields,
-    disabled,
-    load_from_db,
+    canValidateMissingVariable,
+    loadFromDb,
+    currentValue,
     valueExists,
-    unavailableField,
-    value,
+    isDisabled,
     handleOnNewValue,
   ]);
 
-  useEffect(() => {
-    if (initialLoadCompleted.current || disabled || unavailableField === null) {
-      return;
-    }
+  // Create handlers object for better organization
+  const handlers: GlobalVariableHandlers = {
+    // Handler for deleting global variables
+    handleVariableDelete: (variableName: string) => {
+      if (value === variableName) {
+        handleOnNewValue({
+          value: "",
+          load_from_db: false,
+        });
+      }
+    },
 
-    handleOnNewValue(
-      { value: unavailableField, load_from_db: true },
-      { skipSnapshot: true },
-    );
+    // Handler for selecting a global variable
+    handleVariableSelect: (selectedValue: string) => {
+      handleOnNewValue({
+        value: selectedValue,
+        load_from_db: selectedValue !== "",
+      });
+    },
 
-    initialLoadCompleted.current = true;
-  }, [unavailableField, disabled, load_from_db, value, handleOnNewValue]);
+    // Handler for input changes
+    handleInputChange: (inputValue: string, skipSnapshot?: boolean) => {
+      handleOnNewValue(
+        { value: inputValue, load_from_db: false },
+        { skipSnapshot },
+      );
+    },
+  };
 
-  function handleDelete(key: string) {
-    if (value === key) {
-      handleOnNewValue({ value: "", load_from_db: load_from_db });
-    }
+  // Render add new variable button
+  const renderAddVariableButton = () => (
+    <GlobalVariableModal referenceField={display_name} disabled={disabled}>
+      <CommandItem value="doNotFilter-addNewVariable">
+        <ForwardedIconComponent
+          name="Plus"
+          className={cn("mr-2 h-4 w-4 text-primary")}
+          aria-hidden="true"
+        />
+        <span>Add New Variable</span>
+      </CommandItem>
+    </GlobalVariableModal>
+  );
+
+  // Render delete button for each option
+  const renderDeleteButton = (option: string) => (
+    <GeneralDeleteConfirmationModal
+      option={option}
+      onConfirmDelete={() => handlers.handleVariableDelete(option)}
+    />
+  );
+
+  let variableOptions = typedGlobalVariables.map((variable) => variable.name);
+
+  if (
+    loadFromDb &&
+    currentValue &&
+    !valueExists &&
+    !variableOptions.includes(currentValue)
+  ) {
+    variableOptions = [...variableOptions, currentValue];
+  }
+
+  const selectedOption = loadFromDb ? currentValue : "";
+
+  if (!showParameter) {
+    return null;
   }
 
   return (
@@ -99,41 +166,15 @@ export default function InputGlobalComponent({
       editNode={editNode}
       disabled={disabled}
       password={password ?? false}
-      value={value ?? ""}
-      options={globalVariables?.map((variable) => variable.name) ?? []}
-      optionsPlaceholder={"Global Variables"}
+      value={currentValue}
+      options={variableOptions}
+      optionsPlaceholder="Global Variables"
       optionsIcon="Globe"
-      optionsButton={
-        <GlobalVariableModal referenceField={display_name} disabled={disabled}>
-          <CommandItem value="doNotFilter-addNewVariable">
-            <ForwardedIconComponent
-              name="Plus"
-              className={cn("mr-2 h-4 w-4 text-primary")}
-              aria-hidden="true"
-            />
-            <span>Add New Variable</span>
-          </CommandItem>
-        </GlobalVariableModal>
-      }
-      optionButton={(option) => (
-        <GeneralDeleteConfirmationModal
-          option={option}
-          onConfirmDelete={() => handleDelete(option)}
-        />
-      )}
-      selectedOption={load_from_db && valueExists ? value : ""}
-      setSelectedOption={(value) => {
-        handleOnNewValue({
-          value: value,
-          load_from_db: value !== "" ? true : false,
-        });
-      }}
-      onChange={(value, skipSnapshot) => {
-        handleOnNewValue(
-          { value: value, load_from_db: false },
-          { skipSnapshot },
-        );
-      }}
+      optionsButton={renderAddVariableButton()}
+      optionButton={renderDeleteButton}
+      selectedOption={selectedOption}
+      setSelectedOption={handlers.handleVariableSelect}
+      onChange={handlers.handleInputChange}
       isToolMode={isToolMode}
       hasRefreshButton={hasRefreshButton}
     />
