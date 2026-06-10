@@ -19,7 +19,6 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
-import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../../components/common/genericIconComponent";
@@ -71,9 +70,6 @@ export default function NodeStatus({
   );
 
   const connectionLink = nodeAuth?.value;
-  const apiKeyValue =
-    (data.node?.template as Record<string, { value?: string }>)?.api_key
-      ?.value ?? "";
   const isAuthenticated = nodeAuth?.value === "validated";
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
@@ -99,7 +95,6 @@ export default function NodeStatus({
   const version = useDarkStore((state) => state.version);
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const setErrorData = useAlertStore((state) => state.setErrorData);
-  const setFlowPool = useFlowStore((state) => state.setFlowPool);
 
   const postTemplateValue = usePostTemplateValue({
     parameterId: nodeAuth?.name ?? "auth",
@@ -109,64 +104,33 @@ export default function NodeStatus({
 
   // Start polling when connection is initiated
   const startPolling = () => {
+    customOpenNewTab(connectionLink);
     stopPolling();
+
     setIsPolling(true);
 
-    mutateTemplate(
-      { validate: "" },
-      data.id,
-      data.node,
-      (newNode) => {
-        setNode(nodeId, (old) => ({
-          ...old,
-          data: { ...old.data, node: newNode },
-        }));
+    pollingInterval.current = setInterval(() => {
+      mutateTemplate(
+        { validate: data.node?.template?.auth?.value || "" },
+        data.id,
+        data.node,
+        (newNode) => {
+          setNode(nodeId, (old) => ({
+            ...old,
+            data: { ...old.data, node: newNode },
+          }));
+        },
+        postTemplateValue,
+        setErrorData,
+        nodeAuth?.name ?? "auth_link",
+        () => {},
+        data.node.tool_mode,
+      );
+    }, POLLING_INTERVAL);
 
-        const updatedAuth = Object.values(newNode?.template ?? {}).find(
-          (value): value is { type: string; value?: string } =>
-            typeof value === "object" &&
-            value !== null &&
-            (value as { type?: string }).type === "auth",
-        );
-        const oauthUrl = updatedAuth?.value;
-
-        if (
-          oauthUrl &&
-          typeof oauthUrl === "string" &&
-          oauthUrl.startsWith("http")
-        ) {
-          customOpenNewTab(oauthUrl);
-        }
-      },
-      postTemplateValue,
-      setErrorData,
-      nodeAuth?.name ?? "auth_link",
-      () => {
-        pollingInterval.current = setInterval(() => {
-          mutateTemplate(
-            { validate: data.node?.template?.auth?.value || "" },
-            data.id,
-            data.node,
-            (newNode) => {
-              setNode(nodeId, (old) => ({
-                ...old,
-                data: { ...old.data, node: newNode },
-              }));
-            },
-            postTemplateValue,
-            setErrorData,
-            nodeAuth?.name ?? "auth_link",
-            () => {},
-            data.node.tool_mode,
-          );
-        }, POLLING_INTERVAL);
-
-        pollingTimeout.current = setTimeout(() => {
-          stopPolling();
-        }, POLLING_TIMEOUT);
-      },
-      data.node.tool_mode,
-    );
+    pollingTimeout.current = setTimeout(() => {
+      stopPolling();
+    }, POLLING_TIMEOUT);
   };
 
   useEffect(() => {
@@ -294,8 +258,6 @@ export default function NodeStatus({
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
-    setFlowPool({});
-
     if (BuildStatus.BUILDING === buildStatus && isHovered) {
       stopBuilding();
       return;
@@ -354,9 +316,7 @@ export default function NodeStatus({
         : isAuthenticated && !isPolling
           ? "border-accent-emerald-foreground hover:border-accent-amber-foreground"
           : "",
-      connectionLink === "" &&
-        (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY") &&
-        "cursor-not-allowed opacity-50",
+      connectionLink === "" && "cursor-not-allowed opacity-50",
     );
   };
 
@@ -398,9 +358,9 @@ export default function NodeStatus({
           {showNodeStatus && (
             <ShadTooltip
               styleClasses={cn(
-                "border rounded-xl p-2",
+                "border rounded-xl",
                 conditionSuccess
-                  ? "bg-zinc-700"
+                  ? "border-accent-emerald-foreground bg-success-background"
                   : "border-destructive bg-error-background",
               )}
               content={
@@ -415,42 +375,13 @@ export default function NodeStatus({
             >
               <div className="cursor-help">
                 {conditionSuccess && validationStatus?.data?.duration ? (
-                  <div
-                    className="flex items-center gap-1 rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
-                    data-testid={`node_duration_` + display_name.toLowerCase()}
-                  >
-                    {validationStatus?.data?.token_usage && (
-                      <span
-                        className="flex items-center gap-1"
-                        data-testid={`node-token-count-${display_name.toLowerCase()}`}
-                      >
-                        <IconComponent
-                          name="Coins"
-                          className="h-3 w-3 text-muted-foreground"
-                          strokeWidth={ICON_STROKE_WIDTH}
-                        />
-                        <span>
-                          {formatTokenCount(
-                            validationStatus.data.token_usage.total_tokens,
-                          )}
-                        </span>
-                        <span className="text-muted-foreground">|</span>
-                      </span>
-                    )}
+                  <div className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald">
                     <span>
                       {normalizeTimeString(validationStatus?.data?.duration)}
                     </span>
                   </div>
                 ) : (
-                  <div
-                    data-testid={
-                      `node_status_icon_` +
-                      display_name.toLowerCase() +
-                      `_` +
-                      buildStatus?.toLowerCase()
-                    }
-                    className="flex items-center self-center"
-                  >
+                  <div className="flex items-center self-center">
                     {iconStatus}
                   </div>
                 )}
@@ -463,11 +394,7 @@ export default function NodeStatus({
               <div>
                 <Button
                   unstyled
-                  disabled={
-                    (connectionLink === "" &&
-                      (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY")) ||
-                    connectionLink === "error"
-                  }
+                  disabled={connectionLink === "" || connectionLink === "error"}
                   className={getConnectionButtonClasses(
                     connectionLink,
                     isAuthenticated,

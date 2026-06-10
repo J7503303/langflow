@@ -59,15 +59,14 @@ export default function CopyFieldAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-  showParameter = true,
-}: InputProps<string, TextAreaComponentType>): JSX.Element | null {
+}: InputProps<string, TextAreaComponentType>): JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const currentFlow = useFlowStore((state) => state.currentFlow);
-  const endpointName = currentFlow?.endpoint_name ?? currentFlow?.id ?? "";
+  const endpointName = currentFlow?.endpoint_name ?? "";
 
   const valueToRender = useMemo(() => {
     if (value === BACKEND_URL) {
@@ -124,9 +123,7 @@ export default function CopyFieldAreaComponent({
       )}
       <div onClick={handleCopy}>
         <IconComponent
-          dataTestId={`btn_copy_${id?.toLowerCase()}${
-            editNode ? "_advanced" : ""
-          }`}
+          dataTestId={`btn_copy_${id?.toLowerCase()}${editNode ? "_advanced" : ""}`}
           name={isCopied ? "Check" : "Copy"}
           className={cn(
             "cursor-pointer bg-muted",
@@ -140,10 +137,6 @@ export default function CopyFieldAreaComponent({
       </div>
     </>
   );
-
-  if (!showParameter) {
-    return null;
-  }
 
   return (
     <div className={cn("w-full")}>

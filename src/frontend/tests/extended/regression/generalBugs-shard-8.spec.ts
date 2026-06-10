@@ -1,4 +1,4 @@
-import { test } from "../../fixtures";
+import { test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -12,12 +12,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("api request");
 
-    await page.waitForSelector('[data-testid="data_sourceAPI Request"]', {
+    await page.waitForSelector('[data-testid="dataAPI Request"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("data_sourceAPI Request")
+      .getByTestId("dataAPI Request")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();

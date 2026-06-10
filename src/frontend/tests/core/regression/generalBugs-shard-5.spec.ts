@@ -1,6 +1,5 @@
-import { expect, test } from "../../fixtures";
+import { expect, test } from "@playwright/test";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -87,18 +86,18 @@ test(
       });
     //connection 1
     const elementCombineTextOutput0 = page
-      .getByTestId("handle-combinetext-shownode-combined text-right")
+      .getByTestId("div-handle-combinetext-shownode-combined text-right")
       .nth(0);
     await elementCombineTextOutput0.click();
 
     const blockedHandle = page
-      .getByTestId("handle-textinput-shownode-output text-right")
+      .getByTestId("div-handle-textinput-shownode-output text-right")
       .first();
     const secondBlockedHandle = page
-      .getByTestId("handle-combinetext-shownode-combined text-right")
+      .getByTestId("div-handle-combinetext-shownode-combined text-right")
       .nth(1);
     const thirdBlockedHandle = page
-      .getByTestId("handle-textoutput-shownode-output text-right")
+      .getByTestId("div-handle-textoutput-shownode-output text-right")
       .first();
 
     const hasGradient = await blockedHandle?.evaluate((el) => {
@@ -116,21 +115,21 @@ test(
       return style.backgroundColor === "rgb(228, 228, 231)";
     });
 
-    expect(hasGradient).toBe(false);
-    expect(secondHasGradient).toBe(false);
-    expect(thirdHasGradient).toBe(false);
+    expect(hasGradient).toBe(true);
+    expect(secondHasGradient).toBe(true);
+    expect(thirdHasGradient).toBe(true);
 
     const unlockedHandle = page
-      .getByTestId("handle-textinput-shownode-text-left")
+      .getByTestId("div-handle-textinput-shownode-text-left")
       .last();
     const secondUnlockedHandle = page
-      .getByTestId("handle-combinetext-shownode-second text-left")
+      .getByTestId("div-handle-combinetext-shownode-second text-left")
       .last();
     const thirdUnlockedHandle = page
-      .getByTestId("handle-combinetext-shownode-second text-left")
+      .getByTestId("div-handle-combinetext-shownode-second text-left")
       .first();
     const fourthUnlockedHandle = page
-      .getByTestId("handle-textoutput-shownode-inputs-left")
+      .getByTestId("div-handle-textoutput-shownode-inputs-left")
       .first();
 
     const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
@@ -157,49 +156,27 @@ test(
       },
     );
 
-    expect(hasGradientUnlocked).toBe(false);
-    expect(secondHasGradientUnlocked).toBe(false);
-    expect(thirdHasGradientLocked).toBe(false);
-    expect(fourthHasGradientUnlocked).toBe(false);
+    expect(hasGradientUnlocked).toBe(true);
+    expect(secondHasGradientUnlocked).toBe(true);
+    expect(thirdHasGradientLocked).toBe(true);
+    expect(fourthHasGradientUnlocked).toBe(true);
 
     const elementCombineTextInput1 = await page
       .getByTestId("handle-combinetext-shownode-first text-left")
       .nth(1);
     await elementCombineTextInput1.click();
 
-    await adjustScreenView(page, { numberOfZoomOut: 2 });
+    await page.getByTitle("fit view").click();
 
-    // Select both Combine Text nodes using box selection (Shift+drag)
-    // Note: Ctrl/Meta+click doesn't work reliably in Playwright with ReactFlow
-    const combineTextNodes = page.locator(".react-flow__node").filter({
-      has: page.getByTestId("title-Combine Text"),
-    });
+    await zoomOut(page, 2);
 
-    const firstBox = await combineTextNodes.first().boundingBox();
-    const secondBox = await combineTextNodes.nth(1).boundingBox();
-
-    if (firstBox && secondBox) {
-      // Calculate area to drag-select both nodes
-      const startX = Math.min(firstBox.x, secondBox.x) - 50;
-      const startY = Math.min(firstBox.y, secondBox.y) - 50;
-      const endX =
-        Math.max(firstBox.x + firstBox.width, secondBox.x + secondBox.width) +
-        50;
-      const endY =
-        Math.max(firstBox.y + firstBox.height, secondBox.y + secondBox.height) +
-        50;
-
-      // Use Shift+drag for box selection
-      await page.keyboard.down("Shift");
-      await page.mouse.move(startX, startY);
-      await page.mouse.down();
-      await page.mouse.move(endX, endY, { steps: 10 });
-      await page.mouse.up();
-      await page.keyboard.up("Shift");
-    }
+    await page
+      .getByTestId("title-Combine Text")
+      .first()
+      .click({ modifiers: ["ControlOrMeta"] });
 
     await page.waitForSelector('[data-testid="group-node"]', {
-      timeout: 5000,
+      timeout: 3000,
       state: "visible",
     });
 

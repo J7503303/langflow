@@ -243,7 +243,7 @@ const ListSelectionComponent = ({
               />
             ))
           ) : (
-            <div className="py-3 text-center text-muted-foreground">
+            <div className="py-3 text-center text-gray-500">
               No items match your search
             </div>
           )}
@@ -256,7 +256,7 @@ const ListSelectionComponent = ({
               onClick={onAddButtonClick}
             >
               <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-              <span>{addButtonText}</span>
+              {addButtonText}
             </Button>
           )}
         </DialogFooter>

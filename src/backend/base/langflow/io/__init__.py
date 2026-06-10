@@ -1,4 +1,5 @@
-from lfx.io import (
+# noqa: A005
+from langflow.inputs import (
     BoolInput,
     CodeInput,
     DataFrameInput,
@@ -27,7 +28,7 @@ from lfx.io import (
     TableInput,
     ToolsInput,
 )
-from lfx.template import Output
+from langflow.template import Output
 
 __all__ = [
     "BoolInput",

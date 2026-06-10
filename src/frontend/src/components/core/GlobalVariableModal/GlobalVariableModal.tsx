@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
-import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import {
   useGetGlobalVariables,
@@ -15,9 +14,8 @@ import useAlertStore from "@/stores/alertStore";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { useTypesStore } from "@/stores/typesStore";
 import type { ResponseErrorDetailAPI } from "@/types/api";
-import type { GlobalVariable, TAB_TYPES } from "@/types/global_variables";
+import type { GlobalVariable } from "@/types/global_variables";
 import InputComponent from "../parameterRenderComponent/components/inputComponent";
-import { assignTab } from "./utils/assign-tab";
 import sortByName from "./utils/sort-by-name";
 
 //TODO IMPLEMENT FORM LOGIC
@@ -41,9 +39,7 @@ export default function GlobalVariableModal({
 }): JSX.Element {
   const [key, setKey] = useState(initialData?.name ?? "");
   const [value, setValue] = useState(initialData?.value ?? "");
-  const [type, setType] = useState<TAB_TYPES>(
-    initialData?.type ?? "Credential",
-  );
+  const [type, setType] = useState(initialData?.type ?? "Credential");
   const [fields, setFields] = useState<string[]>(
     initialData?.default_fields ?? [],
   );
@@ -58,15 +54,6 @@ export default function GlobalVariableModal({
   const { data: globalVariables } = useGetGlobalVariables();
   const [availableFields, setAvailableFields] = useState<string[]>([]);
   useGetTypes({ checkCache: true, enabled: !!globalVariables });
-
-  useEffect(() => {
-    if (initialData) {
-      setKey(initialData.name ?? "");
-      setValue(initialData.value ?? "");
-      setType(initialData.type ?? "Credential");
-      setFields(initialData.default_fields ?? []);
-    }
-  }, [initialData]);
 
   useEffect(() => {
     if (globalVariables && componentFields.size > 0) {
@@ -87,15 +74,11 @@ export default function GlobalVariableModal({
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
-  const handleOnValueCHange = (value: string) => {
-    setType(assignTab(value));
-  };
-
   function handleSaveVariable() {
     const data: {
       name: string;
       value: string;
-      type?: TAB_TYPES;
+      type?: string;
       default_fields?: string[];
     } = {
       name: key,
@@ -109,14 +92,12 @@ export default function GlobalVariableModal({
         const { name } = res;
         setKey("");
         setValue("");
-        setType("Credential");
+        setType("");
         setFields([]);
         setOpen(false);
 
         setSuccessData({
-          title: `Variable ${name} ${
-            initialData ? "updated" : "created"
-          } successfully`,
+          title: `Variable ${name} ${initialData ? "updated" : "created"} successfully`,
         });
       },
       onError: (error) => {
@@ -125,9 +106,7 @@ export default function GlobalVariableModal({
           title: `Error ${initialData ? "updating" : "creating"} variable`,
           list: [
             responseError?.response?.data?.detail ??
-              `An unexpected error occurred while ${
-                initialData ? "updating a new" : "creating"
-              } variable. Please try again.`,
+              `An unexpected error occurred while ${initialData ? "updating a new" : "creating"} variable. Please try again.`,
           ],
         });
       },
@@ -138,56 +117,13 @@ export default function GlobalVariableModal({
     if (!initialData || !initialData.id) {
       handleSaveVariable();
     } else {
-      // Check if this is a model provider variable based on the original variable name
-      // The backend validates based on the existing variable name, not the new name
-      const isModelProviderVariable = Object.values(
-        PROVIDER_VARIABLE_MAPPING,
-      ).includes(initialData.name);
-
-      // Only include value in update if it has been changed (not empty for credentials)
-      const updateData: {
-        id: string;
-        name: string;
-        value?: string;
-        default_fields?: string[];
-      } = {
+      updateVariable({
         id: initialData.id,
         name: key,
+        value: value,
         default_fields: fields,
-      };
-
-      // Only include value if it's been provided (for credentials, empty means unchanged)
-      if (value) {
-        updateData.value = value;
-      }
-
-      updateVariable(updateData, {
-        onSuccess: (res) => {
-          const { name } = res;
-          setKey("");
-          setValue("");
-          setType("Credential");
-          setFields([]);
-          setOpen(false);
-
-          setSuccessData({
-            title: `Variable ${name} updated successfully`,
-          });
-        },
-        onError: (error) => {
-          const responseError = error as ResponseErrorDetailAPI;
-          const errorMessage =
-            responseError?.response?.data?.detail ??
-            "An unexpected error occurred while updating the variable. Please try again.";
-
-          setErrorData({
-            title: isModelProviderVariable
-              ? "Invalid API Key"
-              : "Error updating variable",
-            list: [errorMessage],
-          });
-        },
       });
+      setOpen(false);
     }
   }
 
@@ -216,7 +152,7 @@ export default function GlobalVariableModal({
             <Label>Type*</Label>
             <Tabs
               defaultValue={type}
-              onValueChange={handleOnValueCHange}
+              onValueChange={setType}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-2">
@@ -288,7 +224,6 @@ export default function GlobalVariableModal({
         submit={{
           label: `${initialData ? "Update" : "Save"} Variable`,
           dataTestId: "save-variable-btn",
-          disabled: !key || (!value && !(initialData && type === "Credential")),
         }}
       />
     </BaseModal>

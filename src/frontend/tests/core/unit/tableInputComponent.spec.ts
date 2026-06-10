@@ -1,16 +1,12 @@
-import { expect, test } from "../../fixtures";
+import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
 
-test.skip(
+test(
   "user must be able to interact with table input component",
   {
     tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
-    // SKIP: This test has UI event conflicts where double-click should expose "Input Editor"
-    // but single-click opens textarea modal that blocks the view. This works in main but
-    // not in this branch despite no UI code changes. Needs investigation of event handling.
     const randomText = Math.random().toString(36).substring(7);
     const secondRandomText = Math.random().toString(36).substring(7);
     const thirdRandomText = Math.random().toString(36).substring(7);
@@ -29,16 +25,17 @@ test.skip(
       },
     );
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+    await page.waitForSelector('[data-testid="zoom_out"]', {
       timeout: 3000,
     });
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
-    await zoomOut(page, 2);
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("code-button-modal").last().click();
+    await page.getByTestId("code-button-modal").click();
 
     const customCodeWithError = `
 # from langflow.field_typing import Data

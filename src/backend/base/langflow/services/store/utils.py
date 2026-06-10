@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 import httpx
-from lfx.log.logger import logger
+from loguru import logger
 
 if TYPE_CHECKING:
     from langflow.services.store.schema import ListComponentResponse
@@ -49,7 +49,7 @@ async def get_lf_version_from_pypi():
             return None
         return response.json()["info"]["version"]
     except Exception:  # noqa: BLE001
-        logger.debug("Error getting the latest version of langflow from PyPI", exc_info=True)
+        logger.opt(exception=True).debug("Error getting the latest version of langflow from PyPI")
         return None
 
 

@@ -6,20 +6,19 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 import orjson
-from lfx.custom.eval import eval_custom_component_code
-from lfx.log.logger import logger
+from loguru import logger
 from pydantic import PydanticDeprecatedSince20
 
+from langflow.custom.eval import eval_custom_component_code
 from langflow.schema.artifact import get_artifact_type, post_process_raw
 from langflow.schema.data import Data
 from langflow.services.deps import get_tracing_service, session_scope
 
 if TYPE_CHECKING:
-    from lfx.custom.custom_component.component import Component
-    from lfx.custom.custom_component.custom_component import CustomComponent
-    from lfx.graph.vertex.base import Vertex
-
+    from langflow.custom.custom_component.component import Component
+    from langflow.custom.custom_component.custom_component import CustomComponent
     from langflow.events.event_manager import EventManager
+    from langflow.graph.vertex.base import Vertex
 
 
 def instantiate_class(
@@ -109,7 +108,7 @@ def convert_kwargs(params):
 
 
 async def update_params_with_load_from_db_fields(
-    custom_component: Component,
+    custom_component: CustomComponent,
     params,
     load_from_db_fields,
     *,
@@ -123,23 +122,21 @@ async def update_params_with_load_from_db_fields(
             try:
                 key = await custom_component.get_variable(name=params[field], field=field, session=session)
             except ValueError as e:
-                if "User id is not set" in str(e):
+                if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
                     raise
-                if "variable not found." in str(e) and not fallback_to_env_vars:
-                    raise
-                await logger.adebug(str(e))
+                logger.debug(str(e))
                 key = None
 
             if fallback_to_env_vars and key is None:
                 key = os.getenv(params[field])
                 if key:
-                    await logger.ainfo(f"Using environment variable {params[field]} for {field}")
+                    logger.info(f"Using environment variable {params[field]} for {field}")
                 else:
-                    await logger.aerror(f"Environment variable {params[field]} is not set.")
+                    logger.error(f"Environment variable {params[field]} is not set.")
 
             params[field] = key if key is not None else None
             if key is None:
-                await logger.awarning(f"Could not get value for {field}. Setting it to None.")
+                logger.warning(f"Could not get value for {field}. Setting it to None.")
 
         return params
 
@@ -192,10 +189,9 @@ async def build_custom_component(params: dict, custom_component: CustomComponent
     raw = post_process_raw(raw, artifact_type)
     artifact = {"repr": custom_repr, "raw": raw, "type": artifact_type}
 
-    vertex = custom_component.get_vertex()
-    if vertex is not None:
-        custom_component.set_artifacts({vertex.outputs[0].get("name"): artifact})
-        custom_component.set_results({vertex.outputs[0].get("name"): build_result})
+    if custom_component._vertex is not None:
+        custom_component._artifacts = {custom_component._vertex.outputs[0].get("name"): artifact}
+        custom_component._results = {custom_component._vertex.outputs[0].get("name"): build_result}
         return custom_component, build_result, artifact
 
     msg = "Custom component does not have a vertex"

@@ -1,6 +1,4 @@
-import os
-
-DEV = os.getenv("LANGFLOW_DEV", "false").lower() == "true"
+DEV = False
 
 
 def _set_dev(value) -> None:

@@ -8,15 +8,13 @@ import { UseRequestProcessor } from "../../services/request-processor";
 // This type is now updated to allow nulls for mode/toolsCount
 // type getMCPServersResponse = Array<MCPServerInfoType>;
 
-export type getMCPServersResponse = Array<MCPServerInfoType>;
+type getMCPServersResponse = Array<MCPServerInfoType>;
 
 export const useGetMCPServers: useQueryFunctionType<
   undefined,
-  getMCPServersResponse,
-  { withCounts?: boolean }
+  getMCPServersResponse
 > = (options) => {
   const { query, queryClient } = UseRequestProcessor();
-  const { withCounts, ...queryOptions } = options ?? {};
 
   // First fetch: action_count=false (fast)
   const responseFn = async () => {
@@ -66,11 +64,11 @@ export const useGetMCPServers: useQueryFunctionType<
   };
 
   const queryResult = query(["useGetMCPServers"], responseFn, {
-    ...queryOptions,
+    ...options,
   });
 
   useEffect(() => {
-    if (withCounts && queryResult.data && queryResult.data.length > 0) {
+    if (queryResult.data && queryResult.data.length > 0) {
       fetchWithCounts().then((countsData) => {
         if (!countsData || countsData.length === 0) return;
         // Merge by name
@@ -85,7 +83,7 @@ export const useGetMCPServers: useQueryFunctionType<
         );
       });
     }
-  }, [withCounts, queryResult.data]);
+  }, [queryResult.data]);
 
   return queryResult;
 };

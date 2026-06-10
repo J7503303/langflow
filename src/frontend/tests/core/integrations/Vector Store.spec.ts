@@ -1,14 +1,13 @@
+import { expect, test } from "@playwright/test";
 import path from "path";
-import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { disableInspectPanel } from "../../utils/open-advanced-options";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 // Add this line to declare Node.js global variables
 declare const process: any;
 declare const __dirname: string;
+
 withEventDeliveryModes(
   "Vector Store RAG",
   { tag: ["@release", "@starter-projects"] },
@@ -22,14 +21,6 @@ withEventDeliveryModes(
       !process?.env?.ASTRA_DB_APPLICATION_TOKEN,
       "ASTRA_DB_APPLICATION_TOKEN required to run this test",
     );
-
-    // AstraDB Cassandra driver causes infinite retry loops on Windows
-    // (system_virtual_schema permission errors) leading to shard timeouts
-    test.skip(
-      process.platform === "win32",
-      "AstraDB driver is not compatible with Windows CI",
-    );
-
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -37,21 +28,20 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 100000,
+    await page.waitForSelector('[title="fit view"]', {
+      timeout: 20000,
     });
 
-    await initialGPTsetup(page);
+    await page.getByTestId("fit_view").click();
 
-    await disableInspectPanel(page);
+    await initialGPTsetup(page);
 
     await page.waitForSelector('[data-testid="title-Astra DB"]', {
       timeout: 3000,
     });
 
     await page.waitForTimeout(500);
-
-    adjustScreenView(page);
+    await page.getByTestId("fit_view").click();
 
     // Astra DB tokens
     await page
@@ -270,7 +260,9 @@ withEventDeliveryModes(
       .getByText("This is a test file.", { exact: true })
       .last()
       .isVisible();
-    await page.getByTestId("chat-header-more-menu").last().click();
+    await page.getByText("Chat", { exact: true }).last().click();
+    await page.getByText("Default Session").last().click();
+    await page.getByRole("combobox").click();
     await page.getByLabel("Message logs").click();
     await page.getByText("timestamp", { exact: true }).last().isVisible();
     await page.getByText("text", { exact: true }).last().isVisible();
@@ -279,14 +271,8 @@ withEventDeliveryModes(
     await page.getByText("session_id", { exact: true }).last().isVisible();
     await page.getByText("files", { exact: true }).last().isVisible();
     await page.getByRole("gridcell").last().isVisible();
-    await page.getByRole("checkbox").first().click();
-    await page.getByTestId("delete-row-button").last().click();
-    await page
-      .getByText("No Data Available", { exact: true })
-      .last()
-      .isVisible();
-    await page.getByText("Close").last().click();
-
+    await page.getByRole("combobox").click();
+    await page.getByLabel("Delete").click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 60000,
     });

@@ -6,7 +6,7 @@ import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/
 import useAlertStore from "@/stores/alertStore";
 import { type ColumnField, FormatterType } from "@/types/utils/functions";
 import "moment-timezone";
-import type { Cookies } from "react-cookie";
+import { Cookies } from "react-cookie";
 import { twMerge } from "tailwind-merge";
 import {
   DRAG_EVENTS_CUSTOM_TYPESS,
@@ -28,7 +28,6 @@ import type {
 import type { AllNodeType, NodeDataType } from "../types/flow";
 import type { FlowState } from "../types/tabs";
 import { isErrorLog } from "../types/utils/typeCheckingUtils";
-import { getLocalStorage } from "./local-storage-util";
 import { parseString } from "./stringManipulation";
 
 export function classNames(...classes: Array<string>): string {
@@ -410,7 +409,7 @@ export function extractColumnsFromRows(
     }
     for (const row of rows) {
       for (const key in columnsKeys) {
-        if (!(key in row)) {
+        if (!row[key]) {
           delete columnsKeys[key];
         }
       }
@@ -425,6 +424,7 @@ export function extractColumnsFromRows(
           filter: true,
           cellRenderer: TableAutoCellRender,
           suppressAutoSize: true,
+          tooltipField: key,
         };
       }
     }
@@ -550,10 +550,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
       field: col.name,
       sortable: col.sortable,
       filter: col.filterable,
-      context: {
-        ...(col.description ? { info: col.description } : {}),
-        ...(col.load_from_db ? { globalVariable: col.load_from_db } : {}),
-      },
+      context: col.description ? { info: col.description } : {},
       cellClass: col.disable_edit ? "cell-disable-edit" : "",
       hide: col.hidden,
       valueParser: (params: ValueParserParams) => {
@@ -619,10 +616,6 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           newCol.cellClass = "no-border !py-2";
           newCol.type = "boolean";
         } else {
-          if (col.load_from_db) {
-            newCol.editable = false;
-            newCol.cellClass = "no-border !py-0 !pr-0";
-          }
           newCol.cellRenderer = TableAutoCellRender;
         }
       }
@@ -1023,21 +1016,9 @@ export const setAuthCookie = (
   tokenName: string,
   value: string,
 ) => {
-  // Only use secure flag if the connection is HTTPS
-  const isSecure =
-    typeof window !== "undefined" && window.location.protocol === "https:";
-
   cookies.set(tokenName, value, {
     path: "/",
-    secure: isSecure,
-    sameSite: isSecure ? "strict" : "lax",
+    secure: true,
+    sameSite: "strict",
   });
-};
-
-export const getBooleanFromStorage = (
-  key: string,
-  defaultValue: boolean,
-): boolean => {
-  const stored = getLocalStorage(key);
-  return stored === null ? defaultValue : stored === "true";
 };

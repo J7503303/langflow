@@ -1,7 +1,6 @@
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -35,8 +34,12 @@ test(
     await page
       .getByTestId("input_outputChat Output")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 400, y: 100 },
+        targetPosition: { x: 0, y: 0 },
       });
+
+    await page
+      .getByTestId("input_outputChat Output")
+      .dragTo(page.locator('//*[@id="react-flow-id"]'));
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("chat input");
@@ -57,25 +60,13 @@ test(
       });
 
     await initialGPTsetup(page);
-    await adjustScreenView(page);
 
-    await page.getByText("OpenAI", { exact: true }).last().click();
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 5000,
+      state: "visible",
+    });
 
-    await expect(
-      page.getByTestId("handle-chatinput-noshownode-chat message-source"),
-    ).toBeVisible();
-
-    if (await page.getByTestId("remove-icon-badge").isVisible()) {
-      await page.getByTestId("remove-icon-badge").click();
-    }
-
-    if (await page.getByTestId("remove-icon-badge").isVisible()) {
-      await page.getByTestId("remove-icon-badge").click();
-    }
-
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .fill(process.env.OPENAI_API_KEY || "");
+    await page.getByTestId("fit_view").click();
 
     await page
       .getByTestId("handle-chatinput-noshownode-chat message-source")
@@ -89,8 +80,8 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .last()
       .click();
-    await adjustScreenView(page);
 
+    await page.getByTestId("fit_view").click();
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
@@ -117,7 +108,7 @@ test(
       timeout: 30000,
     });
 
-    await page.getByTestId("copy-code-button").first().click();
+    await page.getByTestId("copy-code-button").last().click();
 
     const handle = await page.evaluateHandle(() =>
       navigator.clipboard.readText(),
@@ -155,8 +146,9 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-
-    await adjustScreenView(page);
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
+    });
 
     await page.getByTestId("playground-btn-flow-io").click({ force: true });
 

@@ -12,14 +12,8 @@ export type ChatMessageType = {
   componentId?: string;
   id: string;
   timestamp: string;
-  flow_id?: string;
-  session_id?: string;
-  sender?: string;
-  sender_name?: string;
-  text?: string | number;
-  background_color?: string;
-  text_color?: string;
   stream_url?: string | null;
+  sender_name?: string;
   session?: string;
   edit?: boolean;
   icon?: string;
@@ -34,14 +28,8 @@ export type SourceType = {
   source: string;
 };
 
-export type UsageType = {
-  input_tokens?: number | null;
-  output_tokens?: number | null;
-  total_tokens?: number | null;
-};
-
 export type PropertiesType = {
-  source?: SourceType;
+  source: SourceType;
   icon?: string;
   background_color?: string;
   text_color?: string;
@@ -50,8 +38,6 @@ export type PropertiesType = {
   allow_markdown?: boolean;
   state?: string;
   positive_feedback?: boolean | null;
-  build_duration?: number | null;
-  usage?: UsageType | null;
 };
 
 export type ChatOutputType = {
@@ -75,10 +61,7 @@ export type FlowPoolObjectType = {
   valid: boolean;
   // list of chat outputs or list of chat inputs
   messages: Array<ChatOutputType | ChatInputType> | [];
-  data: {
-    artifacts: Record<string, JSONValue>;
-    results: JSONValue | ChatOutputType | ChatInputType;
-  };
+  data: { artifacts: any; results: any | ChatOutputType | ChatInputType };
   id: string;
 };
 
@@ -115,7 +98,7 @@ export interface MediaContent extends BaseContent {
 
 export interface JSONContent extends BaseContent {
   type: "json";
-  data: Record<string, JSONValue>;
+  data: Record<string, any>;
 }
 
 export interface CodeContent extends BaseContent {
@@ -128,9 +111,9 @@ export interface CodeContent extends BaseContent {
 export interface ToolContent extends BaseContent {
   type: "tool_use";
   name?: string;
-  tool_input: Record<string, JSONValue>;
-  output?: JSONValue;
-  error?: JSONValue | string;
+  tool_input: Record<string, any>;
+  output?: any;
+  error?: any;
 }
 
 // Union type for all content types
@@ -169,15 +152,3 @@ export interface PlaygroundEvent {
   session_id?: string;
   edit?: boolean;
 }
-
-// JSON-serializable value type
-export type JSONValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JSONValue[]
-  | { [key: string]: JSONValue };
-
-// Generic JSON object helper
-export type JSONObject = Record<string, JSONValue>;

@@ -4,7 +4,7 @@ from uuid import UUID
 
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
-from lfx.log.logger import logger
+from loguru import logger
 
 
 class KubernetesSecretManager:

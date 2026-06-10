@@ -1,7 +1,6 @@
-import { type Page } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -33,7 +32,7 @@ withEventDeliveryModes(
       .last()
       .click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+    await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
 

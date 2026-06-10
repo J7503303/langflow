@@ -1,36 +1,37 @@
 import { Panel } from "@xyflow/react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { track } from "@/customization/utils/analytics";
-import ExportModal from "@/modals/exportModal";
-import { usePlaygroundStore } from "@/stores/playgroundStore";
+import ShareModal from "../../../modals/shareModal";
 import useFlowStore from "../../../stores/flowStore";
 import { useShortcutsStore } from "../../../stores/shortcuts";
-import { cn, isThereModal } from "../../../utils/utils";
+import { useStoreStore } from "../../../stores/storeStore";
+import { classNames, cn, isThereModal } from "../../../utils/utils";
+import ForwardedIconComponent from "../../common/genericIconComponent";
 import FlowToolbarOptions from "./components/flow-toolbar-options";
 
 const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
   const preventDefault = true;
-  const [openApiModal, setOpenApiModal] = useState<boolean>(false);
-  const [openExportModal, setOpenExportModal] = useState<boolean>(false);
-  const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
-  const setPlaygroundOpen = usePlaygroundStore((state) => state.setIsOpen);
-  const handleAPIWShortcut = (e: KeyboardEvent) => {
-    if (isThereModal() && !openApiModal) return;
-    setOpenApiModal((oldOpen) => !oldOpen);
-  };
+  const [open, setOpen] = useState<boolean>(false);
+  const [openCodeModal, setOpenCodeModal] = useState<boolean>(false);
+  const [openShareModal, setOpenShareModal] = useState<boolean>(false);
+  function handleAPIWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !openCodeModal) return;
+    setOpenCodeModal((oldOpen) => !oldOpen);
+  }
 
-  const handleChatWShortcut = (e: KeyboardEvent) => {
-    if (isThereModal() && !isPlaygroundOpen) return;
+  function handleChatWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !open) return;
     if (useFlowStore.getState().hasIO) {
-      setPlaygroundOpen(!isPlaygroundOpen);
+      setOpen((oldState) => !oldState);
     }
-  };
+  }
 
-  const handleShareWShortcut = (e: KeyboardEvent) => {
-    if (isThereModal() && !openExportModal) return;
-    setOpenExportModal((oldState) => !oldState);
-  };
+  function handleShareWShortcut(e: KeyboardEvent) {
+    if (isThereModal() && !openShareModal) return;
+    setOpenShareModal((oldState) => !oldState);
+  }
 
   const openPlayground = useShortcutsStore((state) => state.openPlayground);
   const api = useShortcutsStore((state) => state.api);
@@ -41,10 +42,10 @@ const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
   useHotkeys(flow, handleShareWShortcut, { preventDefault });
 
   useEffect(() => {
-    if (isPlaygroundOpen) {
+    if (open) {
       track("Playground Button Clicked");
     }
-  }, [isPlaygroundOpen]);
+  }, [open]);
 
   return (
     <>
@@ -54,13 +55,9 @@ const FlowToolbar = memo(function FlowToolbar(): JSX.Element {
             "hover:shadow-round-btn-shadow flex h-11 items-center justify-center gap-7 rounded-md border bg-background px-1.5 shadow transition-all",
           )}
         >
-          <FlowToolbarOptions
-            openApiModal={openApiModal}
-            setOpenApiModal={setOpenApiModal}
-          />
+          <FlowToolbarOptions />
         </div>
       </Panel>
-      <ExportModal open={openExportModal} setOpen={setOpenExportModal} />
     </>
   );
 });

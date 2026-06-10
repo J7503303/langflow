@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
-import { getBaseUrl } from "@/customization/utils/urls";
 import { createFileUpload } from "@/helpers/create-file-upload";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../components/ui/button";
-import { CHAT_UPLOAD_IMAGE_EXTENSIONS } from "../../../../../constants/file-upload-constants";
+import {
+  ALLOWED_IMAGE_INPUT_EXTENSIONS,
+  BASE_URL_API,
+} from "../../../../../constants/constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import type { IOFileInputProps } from "../../../../../types/components";
 
@@ -31,7 +33,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
     if (field) {
       const fileName = field.split("/")[1];
       const flowFileId = currentFlowId.toString();
-      setImage(`${getBaseUrl()}files/images/${flowFileId}/${fileName}`);
+      setImage(`${BASE_URL_API}files/images/${flowFileId}/${fileName}`);
     }
   }, []);
 
@@ -120,7 +122,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   const handleButtonClick = (): void => {
     createFileUpload({
       multiple: false,
-      accept: CHAT_UPLOAD_IMAGE_EXTENSIONS.join(","),
+      accept: ALLOWED_IMAGE_INPUT_EXTENSIONS.join(","),
     }).then((files) => upload(files[0]));
     // Create a file input element
   };

@@ -1,10 +1,7 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
-import { expect } from "../fixtures";
-import { ensureFileSelected } from "./ensure-checkbox-checked";
 import { generateRandomFilename } from "./generate-filename";
-import { unselectNodes } from "./unselect-nodes";
 
 // Function to get the correct mimeType based on file extension
 function getMimeType(extension: string): string {
@@ -34,26 +31,9 @@ function getMimeType(extension: string): string {
 }
 
 export async function uploadFile(page: Page, fileName: string) {
-  await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-    timeout: 100000,
-  });
-
-  await page.getByTestId("canvas_controls_dropdown").click();
   await page.getByTestId("fit_view").click();
-  await page.getByTestId("canvas_controls_dropdown").click({ force: true });
-
-  try {
-    await page
-      .getByText("File", { exact: true })
-      .last()
-      .click({ timeout: 5000 });
-  } catch (error) {
-    // do nothing, means that it's using file management v1
-  }
-
   const fileManagement = await page
     .getByTestId("button_open_file_management")
-    .first()
     ?.isVisible();
 
   if (!fileManagement) {
@@ -83,16 +63,15 @@ export async function uploadFile(page: Page, fileName: string) {
     },
   ]);
 
-  // Wait for the upload success toast to confirm the upload actually completed.
-  // On Windows CI, a race condition in createFileUpload (focus fires before
-  // change) can cause the upload to silently not happen, leaving only the
-  // optimistic "temp" entry. Waiting for the toast ensures the HTTP upload
-  // finished and handleUpload was called.
-  await expect(page.getByText("uploaded successfully")).toBeVisible({
-    timeout: 30000,
-  });
+  await page
+    .getByText(sourceFileName + `.${testFileType}`)
+    .last()
+    .waitFor({ state: "visible", timeout: 3000 });
 
-  await ensureFileSelected(page);
+  const checkbox = page.getByTestId(`checkbox-${sourceFileName}`).last();
+  await expect(checkbox).toHaveAttribute("data-state", "checked", {
+    timeout: 3000,
+  });
 
   await page.getByTestId("select-files-modal-button").click();
 
@@ -100,6 +79,4 @@ export async function uploadFile(page: Page, fileName: string) {
     .getByText(sourceFileName + `.${testFileType}`)
     .first()
     .waitFor({ state: "visible", timeout: 1000 });
-
-  await unselectNodes(page);
 }

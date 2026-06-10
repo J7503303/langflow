@@ -1,5 +1,5 @@
 import { truncate } from "lodash";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import Loading from "@/components/ui/loading";
 import ConfirmationModal from "../confirmationModal";
@@ -20,14 +20,6 @@ export function SaveChangesModal({
   autoSave: boolean;
 }): JSX.Element {
   const [saving, setSaving] = useState(false);
-
-  const handleOpenAutoFocus = useCallback((e: Event) => {
-    e.preventDefault();
-    (
-      document.querySelector('[data-testid="replace-button"]') as HTMLElement
-    )?.focus();
-  }, []);
-
   return (
     <ConfirmationModal
       open={true}
@@ -50,7 +42,6 @@ export function SaveChangesModal({
       onCancel={onProceed}
       loading={autoSave ? true : saving}
       size="x-small"
-      onOpenAutoFocus={handleOpenAutoFocus}
     >
       <ConfirmationModal.Content>
         {autoSave ? (
@@ -60,15 +51,15 @@ export function SaveChangesModal({
           </div>
         ) : (
           <>
-            <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-warning px-4 py-2 text-warning-foreground">
+            <div className="mb-4 flex w-full items-center gap-3 rounded-md bg-yellow-100 px-4 py-2 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-100">
               <ForwardedIconComponent name="Info" className="h-5 w-5" />
               Last saved: {lastSaved ?? "Never"}
             </div>
             Unsaved changes will be permanently lost.{" "}
             <a
               target="_blank"
-              className="text-accent-pink-foreground hover:underline"
-              href="https://docs.langflow.org/environment-variables#visual-editor-and-playground-behavior"
+              className="text-secondary underline"
+              href="https://docs.langflow.org/configuration-auto-save"
               rel="noopener"
             >
               Enable auto-saving

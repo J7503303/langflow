@@ -1,12 +1,6 @@
-import { expect, test } from "../../fixtures";
+import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
 
 test(
   "dropDownComponent",
@@ -19,10 +13,6 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
-
-    // Allow for legacy components
-    await page.getByTestId("sidebar-options-trigger").click();
-    await page.getByTestId("sidebar-legacy-switch").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("amazon");
@@ -66,9 +56,7 @@ test(
       timeout: 3000,
     });
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
+    await page.getByTestId("edit-button-modal").last().click();
 
     await page.waitForTimeout(1000);
 
@@ -132,7 +120,7 @@ test(
       expect(false).toBeTruthy();
     }
 
-    await closeAdvancedOptions(page);
+    await page.getByText("Close").last().click();
 
     value = await page
       .getByTestId("value-dropdown-dropdown_str_model_id")
@@ -140,10 +128,10 @@ test(
     if (value !== "cohere.command-r-plus-v1:0") {
       expect(false).toBeTruthy();
     }
-    await page.getByTestId("code-button-modal").last().click();
+    await page.getByTestId("code-button-modal").click();
 
     await page.locator("textarea").press("Control+a");
-    const emptyOptionsCode = `from langchain_aws import ChatBedrock
+    const emptyOptionsCode = `from langchain_community.chat_models.bedrock import BedrockChat
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
@@ -234,7 +222,7 @@ class AmazonBedrockComponent(LCModelComponent):
         cache = self.cache
         stream = self.stream
         try:
-            output = ChatBedrock(
+            output = BedrockChat(
                 credentials_profile_name=credentials_profile_name,
                 model_id=model_id,
                 region_name=region_name,
@@ -252,7 +240,5 @@ class AmazonBedrockComponent(LCModelComponent):
     await page
       .getByText("No parameters are available for display.")
       .isVisible();
-
-    await enableInspectPanel(page);
   },
 );

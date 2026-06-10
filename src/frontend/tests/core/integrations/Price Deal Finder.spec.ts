@@ -1,7 +1,6 @@
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -33,7 +32,10 @@ withEventDeliveryModes(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Price Deal Finder" }).click();
-    await adjustScreenView(page);
+
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
+    });
 
     await initialGPTsetup(page, {
       skipAdjustScreenView: true,

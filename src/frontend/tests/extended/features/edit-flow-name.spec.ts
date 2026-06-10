@@ -1,4 +1,4 @@
-import { expect, test } from "../../fixtures";
+import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { renameFlow } from "../../utils/rename-flow";
 

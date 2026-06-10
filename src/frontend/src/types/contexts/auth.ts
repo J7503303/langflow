@@ -14,5 +14,4 @@ export type AuthContextType = {
   setApiKey: (apiKey: string | null) => void;
   storeApiKey: (apiKey: string) => void;
   getUser: () => void;
-  clearAuthSession: () => void;
 };

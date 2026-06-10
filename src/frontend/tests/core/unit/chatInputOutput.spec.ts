@@ -1,5 +1,4 @@
-import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
@@ -38,11 +37,11 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
       targetPosition: { x: 100, y: 100 },
     });
 
-  await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+  await page.waitForSelector('[data-testid="fit_view"]', {
     timeout: 100000,
   });
 
-  await adjustScreenView(page);
+  await page.getByTestId("fit_view").click();
 
   await page
     .getByTestId("handle-chatinput-noshownode-chat message-source")
@@ -56,13 +55,7 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("teste");
   await page.getByTestId("button-send").first().click();
+  const chat_input = await page.getByTestId("div-chat-message").textContent();
 
-  await page.waitForSelector('[data-testid="div-chat-message"]', {
-    timeout: 30000,
-  });
-
-  // Wait for the message content to be populated (not just the element to exist)
-  await expect(page.getByTestId("div-chat-message")).toHaveText("teste", {
-    timeout: 30000,
-  });
+  expect(chat_input).toBe("teste");
 });

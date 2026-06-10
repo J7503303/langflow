@@ -1,5 +1,4 @@
-import { type Page } from "@playwright/test";
-import { expect, test } from "../../fixtures";
+import { expect, type Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(

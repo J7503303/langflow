@@ -1,19 +1,10 @@
-import { expect, test } from "../../fixtures";
+import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
   "should be able to see error when something goes wrong on Code Modal",
   { tag: ["@release"] },
-  async ({ page }, testInfo) => {
-    // On Windows, missing C-extension modules (like pytorch) are silently
-    // skipped by prepare_global_scope so that built-in components with
-    // platform-specific deps (e.g. jq) can still render. This means the
-    // Code Modal won't show an import error for the test's fake module.
-    test.skip(
-      testInfo.project.name.includes("win") || process.platform === "win32",
-      "Import error detection differs on Windows due to C-extension handling",
-    );
-
+  async ({ page }) => {
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -31,8 +22,11 @@ test(
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
+
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("code-button-modal").last().click();
+    await page.getByTestId("code-button-modal").click();
 
     const customCodeWithError = `
 # from langflow.field_typing import Data

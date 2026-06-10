@@ -2,7 +2,6 @@ import type { UseMutationResult } from "@tanstack/react-query";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import { extractApiErrorMessage } from "../../helpers/extract-api-error-message";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface PatchInstallMCPParams {
@@ -13,11 +12,8 @@ interface PatchInstallMCPResponse {
   message: string;
 }
 
-export type MCPTransport = "sse" | "streamablehttp";
-
 interface PatchInstallMCPBody {
   client: string;
-  transport?: MCPTransport;
 }
 
 export const usePatchInstallMCP: useMutationFunctionType<
@@ -37,13 +33,13 @@ export const usePatchInstallMCP: useMutationFunctionType<
       );
 
       return { message: res.data?.message || "MCP installed successfully" };
-    } catch (error: unknown) {
-      throw new Error(
-        extractApiErrorMessage(
-          error as Parameters<typeof extractApiErrorMessage>[0],
-          "Failed to install MCP",
-        ),
-      );
+    } catch (error: any) {
+      // Transform the error to include a message that can be handled by the UI
+      const errorMessage =
+        error.response?.data?.detail ||
+        error.message ||
+        "Failed to install MCP";
+      throw new Error(errorMessage);
     }
   }
 
@@ -51,7 +47,7 @@ export const usePatchInstallMCP: useMutationFunctionType<
     PatchInstallMCPResponse,
     any,
     PatchInstallMCPBody
-  > = mutate(["usePatchInstallMCP", params.project_id], patchInstallMCP, {
+  > = mutate(["usePatchInstallMCP"], patchInstallMCP, {
     ...options,
     onSuccess: (data, variables, context) => {
       queryClient.invalidateQueries({

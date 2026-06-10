@@ -4,15 +4,29 @@ slug: /agents
 ---
 
 import Icon from "@site/src/components/icon";
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-import PartialAgentsWork from '@site/docs/_partial-agents-work.mdx';
-import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
 
 Langflow's [**Agent** component](/components-agents) is critical for building agent flows.
 This component provides everything you need to create an agent, including multiple Large Language Model (LLM) providers, tool calling, and custom instructions.
 It simplifies agent configuration so you can focus on application development.
 
-<PartialAgentsWork />
+<details>
+<summary>How do agents work?</summary>
+
+Agents extend LLMs by integrating _tools_, which are functions that provide additional context and enable autonomous task execution.
+These integrations make agents more specialized and powerful than standalone LLMs.
+
+Whereas an LLM might generate acceptable, inert responses to general queries and tasks, an agent can leverage the integrated context and tools to provide more relevant responses and even take action.
+For example, you might create an agent that can access your company's knowledge base, repositories, and other resources to help your team with tasks that require knowledge of your specific products, customers, and code.
+
+Agents use LLMs as a reasoning engine to process input, determine which actions to take to address the query, and then generate a response.
+The response could be a typical text-based LLM response, or it could involve an action, like editing a file, running a script, or calling an external API.
+
+In an agentic context, tools are functions that the agent can run to perform tasks or access external resources.
+A function is wrapped as a `Tool` object with a common interface that the agent understands.
+Agents become aware of tools through tool registration, which is when the agent is provided a list of available tools typically at agent initialization.
+The `Tool` object's description tells the agent what the tool can do so that it can decide whether the tool is appropriate for a given request.
+
+</details>
 
 ## Use the Agent component in a flow
 
@@ -21,22 +35,24 @@ For a prebuilt example, use the **Simple Agent** template or the [Langflow quick
 
 1. Click **New Flow**, and then click **Blank Flow**.
 2. Add an **Agent** component to your flow.
-3. <PartialGlobalModelProviders />
-4. Select the model that you want to use from the **Language Model** dropdown.
-If your preferred model isn't listed, make sure it's enabled in the **Models** configuration.
-For more information, see [Agent component parameters](#agent-component-parameters).
-5. Add [**Chat Input** and **Chat Output** components](/chat-input-and-output) to your flow, and then connect them to the **Agent** component.
+3. Enter a valid OpenAI API key.
 
-    At this point, you have created a basic LLM-based chat flow that you can test in the <Icon name="Play" aria-hidden="true"/> **Playground**.
+    The default model for the **Agent** component is an OpenAI model.
+    If you want to use a different provider, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+    For more information, see [Agent component parameters](#agent-component-parameters).
+
+4. Add [**Chat Input** and **Chat Output** components](/components-io) to your flow, and then connect them to the **Agent** component.
+
+    At this point, you have created a basic LLM-based chat flow that you can test in the <Icon name="Play" aria-hidden="true" /> **Playground**.
     However, this flow only chats with the LLM.
     To enhance this flow and make it truly agentic, add some tools, as explained in the next steps.
 
     ![A basic agent chat flow with Chat Input, Agent, and Chat Output components.](/img/agent-example-add-chat.png)
 
-6. Add **Web Search**, **URL**, and **Calculator** components to your flow.
-7. Enable **Tool Mode** in the **Web Search**, **URL**, and **Calculator** components:
+5. Add **News Search**, **URL**, and **Calculator** components to your flow.
+6. Enable **Tool Mode** in the **News Search**, **URL**, and **Calculator** components:
 
-    1. Click the **Web Search** component to expose the [component's header menu](/concepts-components#component-menus), and then enable **Tool Mode**.
+    1. Click the **News Search** component to expose the [component's header menu](/concepts-components#component-menus), and then enable **Tool Mode**.
     2. Repeat for the **URL** and **Calculator** components.
     3. Connect the **Toolset** port for each tool component to the **Tools** port on the **Agent** component.
 
@@ -49,7 +65,7 @@ For more information, see [Agent component parameters](#agent-component-paramete
 
     ![A more complex agent chat flow where three components are connected to the Agent component as tools](/img/agent-example-add-tools.png)
 
-8. Open the <Icon name="Play" aria-hidden="true"/> **Playground**, and then ask the agent, `What tools are you using to answer my questions?`
+8. Open the <Icon name="Play" aria-hidden="true" /> **Playground**, and then ask the agent, `What tools are you using to answer my questions?`
 
     The agent should respond with a list of the connected tools.
     It may also include built-in tools.
@@ -66,7 +82,7 @@ For more information, see [Agent component parameters](#agent-component-paramete
 9. To test a specific tool, ask the agent a question that uses one of the tools, such as `Summarize today's tech news`.
 
     To help you debug and test your flows, the **Playground** displays the agent's tool calls, the provided input, and the raw output the agent received before generating the summary.
-    With the given example, the agent should call the **Web Search** component with **Search Mode** set to **News**.
+    With the given example, the agent should call the **News Search** component's `search_news` action.
 
 You've successfully created a basic agent flow that uses some generic tools.
 
@@ -78,25 +94,30 @@ For a multi-agent example, see [Use an agent as a tool](/agents-tools#use-an-age
 
 You can configure the **Agent** component to use your preferred provider and model, custom instructions, and tools.
 
-<PartialParams />
+:::tip
+Many optional **Agent** component input parameters are hidden by default in the visual editor.
+You can access all component parameters through the <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+:::
 
 ### Provider and model
 
-Use the **Language Model** (`agent_llm`) setting to select the LLM that you want the agent to use.
+Use the **Model Provider** (`agent_llm`) and **Model Name** (`llm_model`) settings to select the model provider and LLM that you want the agent to use.
 
-<PartialGlobalModelProviders />
+The **Agent** component includes many models from several popular model providers.
+To access other providers and models, set **Model Provider** to **Custom**, and then connect any [**Language Model** component](/components-models).
 
-To use a model with the **Agent** component, select the model in the **Agent** component's **Language Model** field.
+If you need to generate embeddings in your flow, use an [**Embedding Model** component](/components-embedding-models).
 
-The **Language Model** field lists all language models that you've configured globally. If a provider doesn't have any language models available, they aren't listed.
-For example, if a provider offers only embeddings models, those models aren't listed on the **Agent** component.
+### Model provider API key
 
-To access other providers or models, you can do either of the following:
+In the **API Key** field, enter a valid authentication key for your selected model provider, if you are using a built-in provider.
+For example, to use the default OpenAI model, you must provide a valid OpenAI API key for an OpenAI account that has credits and permission to call OpenAI LLMs.
 
-* Connect any [language model component](/components-models) to the **Agent** component's **Language Model** port. This option allows you to connect a custom language model component to use models that aren't available in the global model providers list.
-* Configure additional providers in the **Models** pane, and then select the model from the **Language Model** dropdown.
+You can enter the key directly, but it is recommended that you follow industry best practices for storing and referencing API keys.
+For example, you can use a <Icon name="Globe" aria-hidden="true"/> [global variable](/configuration-global-variables) or [environment variables](/environment-variables).
+For more information, see [Add component API keys to Langflow](/api-keys-and-authentication#component-api-keys).
 
-If you need to generate embeddings in your flow, use an [embedding model component](/components-embedding-models).
+If you select **Custom** as the model provider, authentication is handled in the incoming **Language Model** component.
 
 ### Agent instructions and input
 
@@ -114,7 +135,7 @@ To attach a component as a tool, you must enable **Tool Mode** on the component 
 For more information, see [Configure tools for agents](/agents-tools).
 
 :::tip
-To allow agents to use tools from MCP servers, use the [**MCP Tools** component](/mcp-tools).
+To allow agents to use tools from MCP servers, use the [**MCP Tools** component](/components-agents#mcp-connection).
 :::
 
 ### Agent memory
@@ -127,21 +148,22 @@ It is recommended to use custom session IDs if you need to segregate chat memory
 
 By default, the **Agent** component uses your Langflow installation's storage, and it retrieves a limited number of chat messages, which you can configure with the **Number of Chat History Messages** parameter.
 
-The **Message History** component isn't required for default chat memory, but it is required if you want to use external chat memory like Mem0.
-Additionally, the **Message History** component provides more options for sorting, filtering, and limiting memories. Although, most of these options are built-in to the **Agent** component with default values.
+Although the **Message History** component isn't required for default chat memory, it provides more options for sorting, filtering, and limiting memories, and the **Message History** component is required to use external chat memory like Mem0.
 
-For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/message-history).
+For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/components-helpers#message-history).
 
 ### Additional parameters
 
-With the **Agent** component, the available parameters can change depending on the selected provider and model, including support for additional modes, arguments, or features like chat memory and temperature.
-For example:
+With the **Agent** component, the available parameters can change depending on the selected provider and model.
+For example, some models support additional modes, arguments, or features like chat memory and temperature.
 
-* **Current Date** (`add_current_date_tool`): When enabled (`true`), this setting adds a tool to the agent that can retrieve the current date.
-* **Handle Parse Errors** (`handle_parsing_errors`): When enabled (`true`), this setting allows the agent to fix errors, like typos, when analyzing user input.
-* **Verbose** (`verbose`): When enabled (`true`), this setting records detailed logging output for debugging and analysis.
+Some additional input parameters include the following:
 
-<PartialParams />
+* **Current Date** (`add_current_date_tool`): When enabled (true), this setting adds a tool to the agent that can retrieve the current date.
+* **Handle Parse Errors** (`handle_parsing_errors`): When enabled (true), this setting allows the agent to fix errors, like typos, when analyzing user input.
+* **Verbose** (`verbose`): When enabled (true), this setting records detailed logging output for debugging and analysis.
+
+To view and configure all parameters, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 ## Agent component output
 

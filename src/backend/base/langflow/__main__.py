@@ -15,11 +15,7 @@ import click
 import httpx
 import typer
 from dotenv import load_dotenv
-from fastapi import HTTPException
 from httpx import HTTPError
-from jwt import InvalidTokenError
-from lfx.log.logger import configure, logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
 from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
@@ -31,33 +27,19 @@ from sqlmodel import select
 
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
+from langflow.logging.logger import configure, logger
 from langflow.main import setup_app
-from langflow.services.auth.utils import get_current_user_from_access_token
-from langflow.services.database.models.api_key.crud import check_key
-from langflow.services.database.service import UnsupportedPostgreSQLVersionError, check_postgresql_version_sync
-from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service, get_settings_service, session_scope
+from langflow.services.settings.constants import DEFAULT_SUPERUSER
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
+# Initialize console with Windows-safe settings
+console = Console(legacy_windows=True, emoji=False) if platform.system() == "Windows" else Console()
+
 app = typer.Typer(no_args_is_help=True)
-console = Console()
-if platform.system() == "Windows":
-    console = Console(legacy_windows=True, emoji=False)
-
-# Add LFX commands as a sub-app
-try:
-    from lfx.cli.commands import serve_command
-    from lfx.cli.run import run as lfx_run
-
-    lfx_app = typer.Typer(name="lfx", help="Langflow Executor commands")
-    lfx_app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True)(serve_command)
-    lfx_app.command(name="run", help="Run a flow directly", no_args_is_help=True)(lfx_run)
-
-    app.add_typer(lfx_app, name="lfx")
-except ImportError:
-    # LFX not available, skip adding the sub-app
-    pass
 
 
 class ProcessManager:
@@ -160,6 +142,7 @@ def set_var_for_macos_issue() -> None:
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
         # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
         os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
+        logger.debug("Set OBJC_DISABLE_INITIALIZE_FORK_SAFETY to YES to avoid error")
 
 
 def wait_for_server_ready(host, port, protocol) -> None:
@@ -169,9 +152,6 @@ def wait_for_server_ready(host, port, protocol) -> None:
 
     status_code = 0
     while status_code != httpx.codes.OK:
-        # If the server process died (e.g. database version check failed), stop waiting.
-        if process_manager.webapp_process and not process_manager.webapp_process.is_alive():
-            sys.exit(process_manager.webapp_process.exitcode or 1)
         try:
             status_code = httpx.get(
                 f"{protocol}://{health_check_host}:{port}/health",
@@ -180,7 +160,7 @@ def wait_for_server_ready(host, port, protocol) -> None:
         except HTTPError:
             time.sleep(1)
         except Exception:  # noqa: BLE001
-            logger.debug("Error while waiting for the server to become ready.", exc_info=True)
+            logger.opt(exception=True).debug("Error while waiting for the server to become ready.")
             time.sleep(1)
 
 
@@ -272,19 +252,17 @@ def run(
 ) -> None:
     """Run Langflow."""
     if env_file:
-        if is_settings_service_initialized():
-            err = (
-                "Settings service is already initialized. This indicates potential race conditions "
-                "with settings initialization. Ensure the settings service is not created during "
-                "module loading."
-            )
-            # i.e. ensures the env file is loaded before the settings service is initialized
-            raise ValueError(err)
         load_dotenv(env_file, override=True)
 
-    # Set and normalize log level, with precedence: cli > env > default
-    log_level = (log_level or os.environ.get("LANGFLOW_LOG_LEVEL") or "info").lower()
-    os.environ["LANGFLOW_LOG_LEVEL"] = log_level
+    # Set default log level if not provided
+    log_level_str = "info" if log_level is None else log_level.lower()
+
+    # Must set as env var for child process to pick up
+    env_log_level = os.environ.get("LANGFLOW_LOG_LEVEL")
+    if env_log_level is None:
+        os.environ["LANGFLOW_LOG_LEVEL"] = log_level_str
+    else:
+        os.environ["LANGFLOW_LOG_LEVEL"] = env_log_level.lower()
 
     configure(log_level=log_level, log_file=log_file, log_rotation=log_rotation)
 
@@ -319,7 +297,7 @@ def run(
                 settings_service.set(arg, values[arg])
             elif hasattr(settings_service.auth_settings, arg):
                 settings_service.auth_settings.set(arg, values[arg])
-            logger.debug("Loading config from cli parameter '%s'", arg)
+            logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
 
         # Get final values from settings
         host = settings_service.settings.host
@@ -339,25 +317,13 @@ def run(
 
     # Step 2: Starting Core Services
     with progress.step(2):
-        app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
+        app = setup_app(static_files_dir=static_files_dir, backend_only=backend_only)
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
-        # Pre-flight: fail fast if PostgreSQL version is too old, before
-        # spawning any server process (avoids messy lifespan / worker errors).
-        database_url = settings_service.settings.database_url
-        if database_url:
-            try:
-                check_postgresql_version_sync(database_url)
-            except UnsupportedPostgreSQLVersionError:
-                sys.exit(1)
-
         # check if port is being used
         if is_port_in_use(port, host):
             port = get_free_port(port)
-
-        # Store the runtime-detected port in settings (temporary until strict port enforcement)
-        get_settings_service().settings.runtime_port = port
 
         protocol = "https" if ssl_cert_file_path and ssl_key_file_path else "http"
 
@@ -379,19 +345,9 @@ def run(
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
             # non-picklable code to the subprocess.
             progress.print_summary()
-            print_banner(str(host), int(port or 7860), protocol)
+            print_banner(host, port, protocol)
 
-        from langflow.helpers.windows_postgres_helper import LANGFLOW_DATABASE_URL, POSTGRESQL_PREFIXES
-
-        db_url = os.environ.get(LANGFLOW_DATABASE_URL, "")
-        loop_type = "asyncio"
-        if (
-            platform.system() == "Windows"
-            and db_url
-            and any(db_url.startswith(prefix) for prefix in POSTGRESQL_PREFIXES)
-        ):
-            loop_type = "none"  # Preserve pre-configured WindowsSelectorEventLoopPolicy
-
+        # Blocking call, so must be outside of the progress step
         uvicorn.run(
             app,
             host=host,
@@ -399,7 +355,7 @@ def run(
             log_level=log_level,
             reload=False,
             workers=get_number_of_workers(workers),
-            loop=loop_type,
+            loop="asyncio",
         )
     else:
         with progress.step(6):
@@ -412,8 +368,7 @@ def run(
                 "timeout": worker_timeout,
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
-                "log_level": log_level.lower() if log_level is not None else "info",
-                "preload_app": os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true",
+                "log_level": log_level.lower(),
             }
             server = LangflowApplication(app, options)
 
@@ -425,7 +380,7 @@ def run(
 
         # Print summary and banner after server is ready
         progress.print_summary()
-        print_banner(str(host), int(port or 7860), protocol)
+        print_banner(host, port, protocol)
 
         # Handle browser opening
         if open_browser and not backend_only:
@@ -677,139 +632,41 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
 @app.command()
 def superuser(
-    username: str = typer.Option(
-        None, help="Username for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
-    ),
-    password: str = typer.Option(
-        None, help="Password for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
-    ),
+    username: str = typer.Option(..., prompt=True, help="Username for the superuser."),
+    password: str = typer.Option(..., prompt=True, hide_input=True, help="Password for the superuser."),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
-    auth_token: str = typer.Option(
-        None, help="Authentication token of existing superuser.", envvar="LANGFLOW_SUPERUSER_TOKEN"
-    ),
 ) -> None:
-    """Create a superuser.
-
-    When AUTO_LOGIN is enabled, uses default credentials.
-    In production mode, requires authentication.
-    """
-    configure(log_level=log_level)
-
-    asyncio.run(_create_superuser(username, password, auth_token))
-
-
-async def _create_superuser(username: str, password: str, auth_token: str | None):
     """Create a superuser."""
-    await initialize_services()
+    configure(log_level=log_level)
+    db_service = get_db_service()
 
-    settings_service = get_settings_service()
-    # Check if superuser creation via CLI is enabled
-    if not settings_service.auth_settings.ENABLE_SUPERUSER_CLI:
-        typer.echo("Error: Superuser creation via CLI is disabled.")
-        typer.echo("Set LANGFLOW_ENABLE_SUPERUSER_CLI=true to enable this feature.")
-        raise typer.Exit(1)
+    async def _create_superuser():
+        await initialize_services()
+        async with session_getter(db_service) as session:
+            from langflow.services.auth.utils import create_super_user
 
-    if settings_service.auth_settings.AUTO_LOGIN:
-        # Force default credentials for AUTO_LOGIN mode
-        username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
-    else:
-        # Production mode - prompt for credentials if not provided
-        if not username:
-            username = typer.prompt("Username")
-        if not password:
-            password = typer.prompt("Password", hide_input=True)
+            if await create_super_user(db=session, username=username, password=password):
+                # Verify that the superuser was created
+                from langflow.services.database.models.user.model import User
 
-    from langflow.services.database.models.user.crud import get_all_superusers
+                stmt = select(User).where(User.username == username)
+                user: User = (await session.exec(stmt)).first()
+                if user is None or not user.is_superuser:
+                    typer.echo("Superuser creation failed.")
+                    return
+                # Now create the first folder for the user
+                result = await get_or_create_default_folder(session, user.id)
+                if result:
+                    typer.echo("Default folder created successfully.")
+                else:
+                    msg = "Could not create default folder."
+                    raise RuntimeError(msg)
+                typer.echo("Superuser created successfully.")
 
-    existing_superusers = []
-    async with session_scope() as session:
-        # Note that the default superuser is created by the initialize_services() function,
-        # but leaving this check here in case we change that behavior
-        existing_superusers = await get_all_superusers(session)
-    is_first_setup = len(existing_superusers) == 0
-
-    # If AUTO_LOGIN is true, only allow default superuser creation
-    if settings_service.auth_settings.AUTO_LOGIN:
-        if not is_first_setup:
-            typer.echo("Error: Cannot create additional superusers when AUTO_LOGIN is enabled.")
-            typer.echo("AUTO_LOGIN mode is for development with only the default superuser.")
-            typer.echo("To create additional superusers:")
-            typer.echo("1. Set LANGFLOW_AUTO_LOGIN=false")
-            typer.echo("2. Run this command again with --auth-token")
-            raise typer.Exit(1)
-
-        typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
-        # Do not echo the default password to avoid exposing it in logs.
-    # AUTO_LOGIN is false - production mode
-    elif is_first_setup:
-        typer.echo("No superusers found. Creating first superuser...")
-    else:
-        # Authentication is required in production mode
-        if not auth_token:
-            typer.echo("Error: Creating a superuser requires authentication.")
-            typer.echo("Please provide --auth-token with a valid superuser API key or JWT token.")
-            typer.echo("To get a token, use: `uv run langflow api_key`")
-            raise typer.Exit(1)
-
-        # Validate the auth token
-        try:
-            auth_user = None
-            async with session_scope() as session:
-                # Try JWT first
-                user = None
-                try:
-                    user = await get_current_user_from_access_token(auth_token, session)
-                except (InvalidTokenError, HTTPException):
-                    # Try API key
-                    api_key_result = await check_key(session, auth_token)
-                    if api_key_result and hasattr(api_key_result, "is_superuser"):
-                        user = api_key_result
-                auth_user = user
-
-            if not auth_user or not auth_user.is_superuser:
-                typer.echo(
-                    "Error: Invalid token or insufficient privileges. Only superusers can create other superusers."
-                )
-                raise typer.Exit(1)
-        except typer.Exit:
-            raise  # Re-raise typer.Exit without wrapping
-        except Exception as e:  # noqa: BLE001
-            typer.echo(f"Error: Authentication failed - {e!s}")
-            raise typer.Exit(1) from None
-
-    # Auth complete, create the superuser
-    async with session_scope() as session:
-        from langflow.services.deps import get_auth_service
-
-        auth = get_auth_service()
-        if await auth.create_super_user(username, password, db=session):
-            # Verify that the superuser was created
-            from langflow.services.database.models.user.model import User
-
-            stmt = select(User).where(User.username == username)
-            created_user: User = (await session.exec(stmt)).first()
-            if created_user is None or not created_user.is_superuser:
-                typer.echo("Superuser creation failed.")
-                return
-            # Now create the first folder for the user
-            result = await get_or_create_default_folder(session, created_user.id)
-            if result:
-                typer.echo("Default folder created successfully.")
             else:
-                msg = "Could not create default folder."
-                raise RuntimeError(msg)
+                typer.echo("Superuser creation failed.")
 
-            # Log the superuser creation for audit purposes
-            logger.warning(
-                f"SECURITY AUDIT: New superuser '{username}' created via CLI command"
-                + (" by authenticated user" if auth_token else " (first-time setup)")
-            )
-            typer.echo("Superuser created successfully.")
-
-        else:
-            logger.error(f"SECURITY AUDIT: Failed attempt to create superuser '{username}' via CLI")
-            typer.echo("Superuser creation failed.")
+    asyncio.run(_create_superuser())
 
 
 # command to copy the langflow database from the cache to the current directory
@@ -892,7 +749,6 @@ def api_key(
         settings_service = get_settings_service()
         auth_settings = settings_service.auth_settings
         if not auth_settings.AUTO_LOGIN:
-            # TODO: Allow non-auto-login users to create API keys via CLI
             typer.echo("Auto login is disabled. API keys cannot be created through the CLI.")
             return None
 
@@ -912,10 +768,12 @@ def api_key(
             stmt = select(ApiKey).where(ApiKey.user_id == superuser.id)
             api_key = (await session.exec(stmt)).first()
             if api_key:
-                await delete_api_key(session, api_key.id, superuser.id)
+                await delete_api_key(session, api_key.id)
 
             api_key_create = ApiKeyCreate(name="CLI")
-            return await create_api_key(session, api_key_create, user_id=superuser.id)
+            unmasked_api_key = await create_api_key(session, api_key_create, user_id=superuser.id)
+            await session.commit()
+            return unmasked_api_key
 
     unmasked_api_key = asyncio.run(aapi_key())
     # Create a banner to display the API key and tell the user it won't be shown again

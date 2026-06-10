@@ -1,9 +1,8 @@
 const AstraSVG = (props) => (
   <svg
-    width="1em"
-    height="1em"
+    width="167"
+    height="68"
     viewBox="0 0 167 68"
-    preserveAspectRatio="xMidYMid meet"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     {...props}

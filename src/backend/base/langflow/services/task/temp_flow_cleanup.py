@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 from typing import TYPE_CHECKING
 
-from lfx.log.logger import logger
+from loguru import logger
 from sqlmodel import col, delete, select
 
 from langflow.services.database.models.message.model import MessageTable
@@ -63,10 +63,12 @@ async def cleanup_orphaned_records() -> None:
                         except Exception as exc:  # noqa: BLE001
                             logger.error(f"Failed to list files for flow {flow_id}: {exc!s}")
 
+                    await session.commit()
                     logger.debug(f"Successfully deleted orphaned records from {table.__name__}")
 
             except Exception as exc:  # noqa: BLE001
                 logger.error(f"Error cleaning up orphaned records in {table.__name__}: {exc!s}")
+                await session.rollback()
 
 
 class CleanupWorker:
@@ -77,23 +79,23 @@ class CleanupWorker:
     async def start(self):
         """Start the cleanup worker."""
         if self._task is not None:
-            await logger.awarning("Cleanup worker is already running")
+            logger.warning("Cleanup worker is already running")
             return
 
         self._task = asyncio.create_task(self._run())
-        await logger.adebug("Started database cleanup worker")
+        logger.debug("Started database cleanup worker")
 
     async def stop(self):
         """Stop the cleanup worker gracefully."""
         if self._task is None:
-            await logger.awarning("Cleanup worker is not running")
+            logger.warning("Cleanup worker is not running")
             return
 
-        await logger.adebug("Stopping database cleanup worker...")
+        logger.debug("Stopping database cleanup worker...")
         self._stop_event.set()
         await self._task
         self._task = None
-        await logger.adebug("Database cleanup worker stopped")
+        logger.debug("Database cleanup worker stopped")
 
     async def _run(self):
         """Run the cleanup worker until stopped."""
@@ -103,7 +105,7 @@ class CleanupWorker:
                 # Clean up any orphaned records
                 await cleanup_orphaned_records()
             except Exception as exc:  # noqa: BLE001
-                await logger.aerror(f"Error in cleanup worker: {exc!s}")
+                logger.error(f"Error in cleanup worker: {exc!s}")
 
             try:
                 # Create a task for the timeout

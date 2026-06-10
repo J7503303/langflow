@@ -1,7 +1,7 @@
 import Fuse from "fuse.js";
+import { SearchIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
@@ -13,34 +13,15 @@ import type { TemplateContentProps } from "../../../../types/templates/types";
 import { updateIds } from "../../../../utils/reactflowUtils";
 import { TemplateCategoryComponent } from "../TemplateCategoryComponent";
 
-interface TemplateContentComponentProps extends TemplateContentProps {
-  loading: boolean;
-  onFlowCreating: (loading: boolean) => void;
-}
-
 export default function TemplateContentComponent({
   currentTab,
   categories,
-  loading,
-  onFlowCreating,
-}: TemplateContentComponentProps) {
-  const allExamples = useFlowsManagerStore((state) => state.examples);
-
-  const examples = useMemo(() => {
-    return allExamples
-      .filter((example) => {
-        if (!ENABLE_KNOWLEDGE_BASES && example.name?.includes("Knowledge")) {
-          return false;
-        }
-        return true;
-      })
-      .filter(
-        (example) =>
-          example.tags?.includes(currentTab ?? "") ||
-          currentTab === "all-templates",
-      );
-  }, [allExamples, currentTab]);
-
+}: TemplateContentProps) {
+  const examples = useFlowsManagerStore((state) => state.examples).filter(
+    (example) =>
+      example.tags?.includes(currentTab ?? "") ||
+      currentTab === "all-templates",
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredExamples, setFilteredExamples] = useState(examples);
   const addFlow = useAddFlow();
@@ -72,19 +53,13 @@ export default function TemplateContentComponent({
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = 0;
     }
-  }, [searchQuery, currentTab, examples, fuse]);
+  }, [searchQuery, currentTab]);
 
   const handleCardClick = (example) => {
-    if (loading) return;
-    onFlowCreating(true);
     updateIds(example.data);
-    addFlow({ flow: example })
-      .then((id) => {
-        navigate(`/flow/${id}/folder/${folderIdUrl}`);
-      })
-      .finally(() => {
-        onFlowCreating(false);
-      });
+    addFlow({ flow: example }).then((id) => {
+      navigate(`/flow/${id}/folder/${folderIdUrl}`);
+    });
     track("New Flow Created", { template: `${example.name} Template` });
   };
 
@@ -125,7 +100,6 @@ export default function TemplateContentComponent({
           <TemplateCategoryComponent
             examples={filteredExamples}
             onCardClick={handleCardClick}
-            loading={loading}
           />
         ) : (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-center">

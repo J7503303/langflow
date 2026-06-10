@@ -86,11 +86,8 @@ try {
 Write-Host "`nStep 4: Running Langflow..." -ForegroundColor Yellow
 Write-Host "`nAttention: Wait until uvicorn is running before opening the browser" -ForegroundColor Red
 try {
-    # Change to project root directory for uv
-    Set-Location $projectRoot
     if ($useEnvFile) {
-        Write-Host "Using env file: .env" -ForegroundColor Cyan
-        & uv run --env-file ".env" langflow run
+        & uv run langflow run --env-file $envPath
     } else {
         & uv run langflow run
     }

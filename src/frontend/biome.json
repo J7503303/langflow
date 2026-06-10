@@ -6,14 +6,8 @@
     "useIgnoreFile": true,
     "defaultBranch": "main"
   },
-  "files": {
-    "ignoreUnknown": false
-  },
-  "formatter": {
-    "enabled": true,
-    "indentStyle": "space",
-    "indentWidth": 2
-  },
+  "files": { "ignoreUnknown": false },
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },
   "linter": {
     "domains": {
       "test": "recommended"
@@ -21,9 +15,7 @@
     "enabled": true,
     "rules": {
       "recommended": false,
-      "a11y": {
-        "noStaticElementInteractions": "warn"
-      },
+      "a11y": { "noStaticElementInteractions": "warn" },
       "complexity": {
         "noAdjacentSpacesInRegex": "error",
         "noExtraBooleanCast": "error",
@@ -45,8 +37,6 @@
         "noUnreachable": "error",
         "noUnreachableSuper": "error",
         "noUnsafeFinally": "error",
-        "noUnusedImports": "error",
-
         "noUnusedLabels": "error",
         "noUnusedPrivateClassMembers": "error",
         "noUnusedVariables": "warn",
@@ -73,10 +63,8 @@
         "noDuplicateCase": "error",
         "noDuplicateClassMembers": "error",
         "noDuplicateElseIf": "error",
-        "noDuplicateAtImportRules": "error",
         "noDuplicateObjectKeys": "error",
         "noDuplicateParameters": "error",
-        "noExplicitAny": "error",
         "noFallthroughSwitchClause": "error",
         "noFunctionAssign": "error",
         "noGlobalAssign": "error",
@@ -94,17 +82,9 @@
       }
     }
   },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "double"
-    }
-  },
+  "javascript": { "formatter": { "quoteStyle": "double" } },
   "assist": {
     "enabled": true,
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
-    }
+    "actions": { "source": { "organizeImports": "on" } }
   }
 }

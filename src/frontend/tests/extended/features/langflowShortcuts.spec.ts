@@ -1,4 +1,4 @@
-import { expect, test } from "../../fixtures";
+import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -26,11 +26,12 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await adjustScreenView(page);
-    await adjustScreenView(page, { numberOfZoomOut: 2 });
+    await page.getByTestId("fit_view").click();
 
+    await adjustScreenView(page);
     await page.getByTestId("generic-node-title-arrangement").click();
-    await expect(page.getByTestId("panel-description")).toBeVisible();
+    await page.keyboard.press(`ControlOrMeta+Shift+A`);
+    await page.getByText("Close").last().click();
 
     await page.getByTestId("generic-node-title-arrangement").click();
     await page.keyboard.press(`ControlOrMeta+d`);

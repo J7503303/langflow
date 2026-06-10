@@ -18,14 +18,14 @@ import websockets
 from cryptography.fernet import InvalidToken
 from elevenlabs import ElevenLabs
 from fastapi import APIRouter, BackgroundTasks
-from lfx.log import logger
-from lfx.schema.schema import InputValueRequest
 from openai import OpenAI
 from sqlalchemy import select
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.chat import build_flow_and_stream
+from langflow.api.v1.schemas import InputValueRequest
+from langflow.logging import logger
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import get_current_user_for_websocket
@@ -33,9 +33,13 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_variable_service, session_scope
-from langflow.utils.voice_utils import BYTES_PER_24K_FRAME, VAD_SAMPLE_RATE_16K, resample_24k_to_16k
+from langflow.utils.voice_utils import (
+    BYTES_PER_24K_FRAME,
+    VAD_SAMPLE_RATE_16K,
+    resample_24k_to_16k,
+)
 
-router = APIRouter(prefix="/voice", tags=["Voice"], include_in_schema=False)
+router = APIRouter(prefix="/voice", tags=["Voice"])
 
 SILENCE_THRESHOLD = 0.1
 PREFIX_PADDING_MS = 100
@@ -117,8 +121,8 @@ async def authenticate_and_get_openai_key(session: DbSession, user: User, websoc
             )
             return None, None
     except Exception as e:  # noqa: BLE001
-        await logger.aerror(f"Error with API key: {e}")
-        await logger.aerror(traceback.format_exc())
+        logger.error(f"Error with API key: {e}")
+        logger.error(traceback.format_exc())
         return None, None
     return user, openai_key
 
@@ -181,13 +185,13 @@ class ElevenLabsClientManager:
                         session=session,
                     )
                 except (InvalidToken, ValueError) as e:
-                    await logger.aerror(f"Error with ElevenLabs API key: {e}")
+                    logger.error(f"Error with ElevenLabs API key: {e}")
                     cls._api_key = os.getenv("ELEVENLABS_API_KEY", "")
                     if not cls._api_key:
-                        await logger.aerror("ElevenLabs API key not found")
+                        logger.error("ElevenLabs API key not found")
                         return None
                 except (KeyError, AttributeError, sqlalchemy.exc.SQLAlchemyError) as e:
-                    await logger.aerror(f"Exception getting ElevenLabs API key: {e}")
+                    logger.error(f"Exception getting ElevenLabs API key: {e}")
                     return None
 
             if cls._api_key:
@@ -306,25 +310,25 @@ async def process_message_queue(queue_key, session):
 
             try:
                 await aadd_messagetables([message], session)
-                await logger.adebug(f"Added message to DB: {message.text[:30]}...")
+                logger.debug(f"Added message to DB: {message.text[:30]}...")
             except ValueError as e:
-                await logger.aerror(f"Error saving message to database (ValueError): {e}")
-                await logger.aerror(traceback.format_exc())
+                logger.error(f"Error saving message to database (ValueError): {e}")
+                logger.error(traceback.format_exc())
             except sqlalchemy.exc.SQLAlchemyError as e:
-                await logger.aerror(f"Error saving message to database (SQLAlchemyError): {e}")
-                await logger.aerror(traceback.format_exc())
+                logger.error(f"Error saving message to database (SQLAlchemyError): {e}")
+                logger.error(traceback.format_exc())
             except (KeyError, AttributeError, TypeError) as e:
                 # More specific exceptions instead of blind Exception
-                await logger.aerror(f"Error saving message to database: {e}")
-                await logger.aerror(traceback.format_exc())
+                logger.error(f"Error saving message to database: {e}")
+                logger.error(traceback.format_exc())
             finally:
                 message_queues[queue_key].task_done()
 
             if message_queues[queue_key].empty():
                 break
     except Exception as e:  # noqa: BLE001
-        await logger.adebug(f"Message queue processor for {queue_key} was cancelled: {e}")
-        await logger.aerror(traceback.format_exc())
+        logger.debug(f"Message queue processor for {queue_key} was cancelled: {e}")
+        logger.error(traceback.format_exc())
 
 
 class SendQueues:
@@ -365,7 +369,7 @@ class SendQueues:
                     logger.trace("OPENAI BLOCKING")
                 # log_event(msg, DIRECTION_TO_OPENAI)
         except Exception:  # noqa: BLE001
-            await logger.aerror(traceback.format_exc())
+            logger.error(traceback.format_exc())
 
     def client_send(self, payload):
         try:
@@ -383,7 +387,7 @@ class SendQueues:
                 self.log_event(msg, LF_TO_CLIENT)
                 await self.client_ws.send_text(json.dumps(msg))
         except Exception:  # noqa: BLE001
-            await logger.aerror(traceback.format_exc())
+            logger.error(traceback.format_exc())
 
     async def close(self):
         self.openai_send_q.put_nowait(None)
@@ -458,7 +462,7 @@ async def handle_function_call(
         create_response()
     except json.JSONDecodeError as e:
         trace = traceback.format_exc()
-        await logger.aerror(f"JSON decode error: {e!s}\ntrace: {trace}")
+        logger.error(f"JSON decode error: {e!s}\ntrace: {trace}")
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -470,7 +474,7 @@ async def handle_function_call(
         msg_handler.openai_send(function_output)
     except ValueError as e:
         trace = traceback.format_exc()
-        await logger.aerror(f"Value error: {e!s}\ntrace: {trace}")
+        logger.error(f"Value error: {e!s}\ntrace: {trace}")
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -482,7 +486,7 @@ async def handle_function_call(
         msg_handler.openai_send(function_output)
     except (ConnectionError, websockets.exceptions.WebSocketException) as e:
         trace = traceback.format_exc()
-        await logger.aerror(f"Connection error: {e!s}\ntrace: {trace}")
+        logger.error(f"Connection error: {e!s}\ntrace: {trace}")
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -493,8 +497,8 @@ async def handle_function_call(
         }
         msg_handler.openai_send(function_output)
     except (KeyError, AttributeError, TypeError) as e:
-        await logger.aerror(f"Error executing flow: {e}")
-        await logger.aerror(traceback.format_exc())
+        logger.error(f"Error executing flow: {e}")
+        logger.error(traceback.format_exc())
         function_output = {
             "type": "conversation.item.create",
             "item": {
@@ -747,7 +751,7 @@ async def flow_as_tool_websocket(
         except Exception as e:  # noqa: BLE001
             err_msg = {"error": f"Failed to load flow: {e!s}"}
             await client_websocket.send_json(err_msg)
-            await logger.aerror(f"Failed to load flow: {e}")
+            logger.error(f"Failed to load flow: {e}")
             return
 
         url = "wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview"
@@ -796,7 +800,7 @@ async def flow_as_tool_websocket(
                                     msg_handler.openai_send({"type": "response.cancel"})
                                     bot_speaking_flag[0] = False
                         except Exception as e:  # noqa: BLE001
-                            await logger.aerror(f"[ERROR] VAD processing failed (ValueError): {e}")
+                            logger.error(f"[ERROR] VAD processing failed (ValueError): {e}")
                             continue
                     if has_speech:
                         last_speech_time = datetime.now(tz=timezone.utc)
@@ -852,7 +856,7 @@ async def flow_as_tool_websocket(
                 return new_session
 
             class Response:
-                def __init__(self, response_id: str, *, use_elevenlabs: bool | None = None):
+                def __init__(self, response_id: str, use_elevenlabs: bool | None = None):
                     if use_elevenlabs is None:
                         use_elevenlabs = False
                     self.response_id = response_id
@@ -921,7 +925,7 @@ async def flow_as_tool_websocket(
                     # client_send_event_from_thread(event, main_loop)
                     msg_handler.client_send(event)
                 except Exception:  # noqa: BLE001
-                    await logger.aerror(traceback.format_exc())
+                    logger.error(traceback.format_exc())
 
             async def forward_to_openai() -> None:
                 nonlocal openai_realtime_session
@@ -950,10 +954,10 @@ async def flow_as_tool_websocket(
                                 msg_handler.openai_send(msg)
                                 num_audio_samples = 0
                         elif msg.get("type") == "langflow.voice_mode.config":
-                            await logger.ainfo(f"langflow.voice_mode.config {msg}")
+                            logger.info(f"langflow.voice_mode.config {msg}")
                             voice_config.progress_enabled = msg.get("progress_enabled", True)
                         elif msg.get("type") == "langflow.elevenlabs.config":
-                            await logger.ainfo(f"langflow.elevenlabs.config {msg}")
+                            logger.info(f"langflow.elevenlabs.config {msg}")
                             voice_config.use_elevenlabs = msg["enabled"]
                             voice_config.elevenlabs_voice = msg.get("voice_id", voice_config.elevenlabs_voice)
 
@@ -993,7 +997,7 @@ async def flow_as_tool_websocket(
                         if do_forward:
                             msg_handler.client_send(event)
                         if event_type == "response.created":
-                            responses[response_id] = Response(response_id, use_elevenlabs=voice_config.use_elevenlabs)
+                            responses[response_id] = Response(response_id, voice_config.use_elevenlabs)
                             if function_call:
                                 if function_call.is_prog_enabled and not function_call.prog_rsp_id:
                                     function_call.prog_rsp_id = response_id
@@ -1017,12 +1021,12 @@ async def flow_as_tool_websocket(
                                     message_text = event.get("text", "")
                                     await add_message_to_db(message_text, session, flow_id, session_id, "Machine", "AI")
                                 except ValueError as err:
-                                    await logger.aerror(f"Error saving message to database (ValueError): {err}")
-                                    await logger.aerror(traceback.format_exc())
+                                    logger.error(f"Error saving message to database (ValueError): {err}")
+                                    logger.error(traceback.format_exc())
                                 except (KeyError, AttributeError, TypeError) as err:
                                     # Replace blind Exception with specific exceptions
-                                    await logger.aerror(f"Error saving message to database: {err}")
-                                    await logger.aerror(traceback.format_exc())
+                                    logger.error(f"Error saving message to database: {err}")
+                                    logger.error(traceback.format_exc())
 
                         elif event_type == "response.output_item.added":
                             bot_speaking_flag[0] = True
@@ -1046,12 +1050,12 @@ async def flow_as_tool_websocket(
                                 if transcript and transcript.strip():
                                     await add_message_to_db(transcript, session, flow_id, session_id, "Machine", "AI")
                             except ValueError as err:
-                                await logger.aerror(f"Error saving message to database (ValueError): {err}")
-                                await logger.aerror(traceback.format_exc())
+                                logger.error(f"Error saving message to database (ValueError): {err}")
+                                logger.error(traceback.format_exc())
                             except (KeyError, AttributeError, TypeError) as err:
                                 # Replace blind Exception with specific exceptions
-                                await logger.aerror(f"Error saving message to database: {err}")
-                                await logger.aerror(traceback.format_exc())
+                                logger.error(f"Error saving message to database: {err}")
+                                logger.error(traceback.format_exc())
                             bot_speaking_flag[0] = False
                         elif event_type == "response.done":
                             msg_handler.openai_unblock()
@@ -1076,12 +1080,12 @@ async def flow_as_tool_websocket(
                                 if message_text and message_text.strip():
                                     await add_message_to_db(message_text, session, flow_id, session_id, "User", "User")
                             except ValueError as e:
-                                await logger.aerror(f"Error saving message to database (ValueError): {e}")
-                                await logger.aerror(traceback.format_exc())
+                                logger.error(f"Error saving message to database (ValueError): {e}")
+                                logger.error(traceback.format_exc())
                             except (KeyError, AttributeError, TypeError) as e:
                                 # Replace blind Exception with specific exceptions
-                                await logger.aerror(f"Error saving message to database: {e}")
-                                await logger.aerror(traceback.format_exc())
+                                logger.error(f"Error saving message to database: {e}")
+                                logger.error(traceback.format_exc())
                         elif event_type == "error":
                             pass
 
@@ -1100,12 +1104,12 @@ async def flow_as_tool_websocket(
                 # Check for exceptions in results
                 for result in results:
                     if isinstance(result, Exception):
-                        await logger.aerror("WS loop failed:", exc_info=result)
-                        await logger.aerror(traceback.format_exc())
+                        logger.error("WS loop failed:", exc_info=result)
+                        logger.error(traceback.format_exc())
             except Exception as e:  # noqa: BLE001
                 # Handle any other exceptions
-                await logger.aerror(f"WS loop failed: {e}")
-                await logger.aerror(traceback.format_exc())
+                logger.error(f"WS loop failed: {e}")
+                logger.error(traceback.format_exc())
             finally:
                 # shared cleanup for writers & sockets
                 async def close():
@@ -1115,8 +1119,8 @@ async def flow_as_tool_websocket(
 
                 await close()
     except Exception as e:  # noqa: BLE001
-        await logger.aerror(f"Unexpected error: {e}")
-        await logger.aerror(traceback.format_exc())
+        logger.error(f"Unexpected error: {e}")
+        logger.error(traceback.format_exc())
     finally:
         # Make sure to clean up the task
         if vad_task and not vad_task.done():
@@ -1228,16 +1232,16 @@ async def flow_tts_websocket(
                         elif event.get("type") == "input_audio_buffer.commit":
                             openai_send(event)
                         elif event.get("type") == "langflow.elevenlabs.config":
-                            await logger.ainfo(f"langflow.elevenlabs.config {event}")
+                            logger.info(f"langflow.elevenlabs.config {event}")
                             tts_config.use_elevenlabs = event["enabled"]
                             tts_config.elevenlabs_voice = event.get("voice_id", tts_config.elevenlabs_voice)
                         elif event.get("type") == "voice.settings":
                             # Store the voice setting
                             if event.get("voice"):
                                 tts_config.openai_voice = event.get("voice")
-                                await logger.ainfo(f"Updated OpenAI voice to: {tts_config.openai_voice}")
+                                logger.info(f"Updated OpenAI voice to: {tts_config.openai_voice}")
                 except Exception as e:  # noqa: BLE001
-                    await logger.aerror(f"Error in WebSocket communication: {e}")
+                    logger.error(f"Error in WebSocket communication: {e}")
 
             async def forward_to_client() -> None:
                 try:
@@ -1308,7 +1312,7 @@ async def flow_tts_websocket(
                                         audio_event = {"type": "response.audio.delta", "delta": base64_audio}
                                         client_send(audio_event)
                 except Exception as e:  # noqa: BLE001
-                    await logger.aerror(f"Error in WebSocket communication: {e}")
+                    logger.error(f"Error in WebSocket communication: {e}")
 
             try:
                 # Create tasks and gather them for concurrent execution
@@ -1317,13 +1321,13 @@ async def flow_tts_websocket(
                 await asyncio.gather(task1, task2)
             except Exception as exc:  # noqa: BLE001
                 # handle any exceptions from any task
-                await logger.aerror("WS loop failed:", exc_info=exc)
+                logger.error("WS loop failed:", exc_info=exc)
             finally:
                 # shared cleanup for writers & sockets
                 await close()
     except Exception as e:  # noqa: BLE001
-        await logger.aerror(f"Unexpected error: {e}")
-        await logger.aerror(traceback.format_exc())
+        logger.error(f"Unexpected error: {e}")
+        logger.error(traceback.format_exc())
 
 
 def extract_transcript(json_data):
@@ -1363,13 +1367,13 @@ async def get_elevenlabs_voice_ids(
             for voice in voices
         ]
     except ValueError as e:
-        await logger.aerror(f"Error fetching ElevenLabs voices (ValueError): {e}")
+        logger.error(f"Error fetching ElevenLabs voices (ValueError): {e}")
         return {"error": str(e)}
     except requests.RequestException as e:
-        await logger.aerror(f"Error fetching ElevenLabs voices (RequestException): {e}")
+        logger.error(f"Error fetching ElevenLabs voices (RequestException): {e}")
         return {"error": str(e)}
     except (KeyError, AttributeError, TypeError) as e:
         # More specific exceptions instead of blind Exception
-        await logger.aerror(f"Error fetching ElevenLabs voices: {e}")
-        await logger.aerror(traceback.format_exc())
+        logger.error(f"Error fetching ElevenLabs voices: {e}")
+        logger.error(traceback.format_exc())
         return {"error": str(e)}

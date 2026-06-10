@@ -6,7 +6,7 @@ from uuid import UUID
 
 import httpx
 from httpx import HTTPError, HTTPStatusError
-from lfx.log.logger import logger
+from loguru import logger
 
 from langflow.services.base import Service
 from langflow.services.store.exceptions import APIKeyError, FilterError, ForbiddenError
@@ -24,7 +24,7 @@ from langflow.services.store.utils import (
 )
 
 if TYPE_CHECKING:
-    from lfx.services.settings.service import SettingsService
+    from langflow.services.settings.service import SettingsService
 
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
@@ -162,7 +162,7 @@ class StoreService(Service):
         except HTTPError:
             raise
         except Exception:  # noqa: BLE001
-            logger.debug("Webhook failed", exc_info=True)
+            logger.opt(exception=True).debug("Webhook failed")
 
     @staticmethod
     def build_tags_filter(tags: list[str]):
@@ -594,7 +594,7 @@ class StoreService(Service):
                         authorized = True
                         result = updated_result
                     except Exception:  # noqa: BLE001
-                        logger.debug("Error updating components with user data", exc_info=True)
+                        logger.opt(exception=True).debug("Error updating components with user data")
                         # If we get an error here, it means the user is not authorized
                         authorized = False
         return ListComponentResponseModel(results=result, authorized=authorized, count=comp_count)

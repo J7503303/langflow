@@ -19,7 +19,7 @@ import type { MCPServerInfoType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
 
 export default function MCPServersPage() {
-  const { data: servers } = useGetMCPServers({ withCounts: true });
+  const { data: servers } = useGetMCPServers();
   const { mutate: deleteServer } = useDeleteMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [addOpen, setAddOpen] = useState(false);
@@ -60,10 +60,7 @@ export default function MCPServersPage() {
     <div className="flex h-full w-full flex-col gap-6">
       <div className="flex w-full items-start justify-between gap-6">
         <div className="flex flex-col">
-          <h2
-            className="flex items-center text-lg font-semibold tracking-tight"
-            data-testid="settings_menu_header"
-          >
+          <h2 className="flex items-center text-lg font-semibold tracking-tight">
             MCP Servers
             <ForwardedIconComponent
               name="Mcp"
@@ -81,7 +78,7 @@ export default function MCPServersPage() {
             data-testid="add-mcp-server-button-page"
           >
             <ForwardedIconComponent name="Plus" className="w-4" />
-            <span>Add MCP Server</span>
+            Add MCP Server
           </Button>
           <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
         </div>
@@ -99,18 +96,13 @@ export default function MCPServersPage() {
               </div>
             )}
             <div className="flex flex-col gap-1">
-              {servers.map((server, index) => (
+              {servers.map((server) => (
                 <div
-                  key={server.name}
+                  key={server.id}
                   className="flex items-center justify-between rounded-lg px-3 py-2 shadow-sm transition-colors hover:bg-accent"
                 >
                   <div className="flex items-center gap-2">
-                    <span
-                      className="text-sm font-medium"
-                      data-testid={"mcp_server_name_" + index}
-                    >
-                      {server.name}
-                    </span>
+                    <span className="text-sm font-medium">{server.name}</span>
                     <ShadTooltip content={server.error}>
                       <span
                         className={cn(
@@ -126,9 +118,7 @@ export default function MCPServersPage() {
                             : "Loading..."
                           : !server.toolsCount
                             ? "No tools found"
-                            : `${server.toolsCount} tool${
-                                server.toolsCount === 1 ? "" : "s"
-                              }`}
+                            : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`}
                       </span>
                     </ShadTooltip>
                   </div>

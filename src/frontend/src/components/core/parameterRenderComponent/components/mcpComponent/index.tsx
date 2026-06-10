@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
@@ -15,10 +15,8 @@ export default function McpComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-  showParameter = true,
-}: InputProps<string, any>): JSX.Element | null {
-  const [open, setOpen] = useState(false);
-  const { data: mcpServers } = useGetMCPServers({ withCounts: true });
+}: InputProps<string, any>): JSX.Element {
+  const { data: mcpServers } = useGetMCPServers();
   const { mutate: addMcpServer } = useAddMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const options = useMemo(
@@ -38,6 +36,7 @@ export default function McpComponent({
       })),
     [mcpServers],
   );
+  const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any[]>([]);
   const { name, config } = useMemo(
@@ -132,10 +131,6 @@ export default function McpComponent({
     );
   }, [selectedOption, config]);
 
-  if (!showParameter) {
-    return null;
-  }
-
   return (
     <div className="flex w-full flex-col gap-2">
       {options == null || options.length > 0 || showSaveButton ? (
@@ -192,11 +187,7 @@ export default function McpComponent({
           )}
         </div>
       ) : (
-        <Button
-          size="sm"
-          onClick={handleAddButtonClick}
-          data-testid="add-mcp-server-simple-button"
-        >
+        <Button size="sm" onClick={handleAddButtonClick}>
           <span>Add MCP Server</span>
         </Button>
       )}

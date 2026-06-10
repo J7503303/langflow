@@ -6,8 +6,7 @@ from collections import OrderedDict
 from typing import Generic, Union
 
 import dill
-from lfx.log.logger import logger
-from lfx.services.cache.utils import CACHE_MISS
+from loguru import logger
 from typing_extensions import override
 
 from langflow.services.cache.base import (
@@ -17,6 +16,7 @@ from langflow.services.cache.base import (
     ExternalAsyncBaseCacheService,
     LockType,
 )
+from langflow.services.cache.utils import CACHE_MISS
 
 
 class ThreadingInMemoryCache(CacheService, Generic[LockType]):
@@ -228,7 +228,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             await self._client.ping()
         except redis.exceptions.ConnectionError:
             msg = "RedisCache could not connect to the Redis server"
-            await logger.aexception(msg)
+            logger.exception(msg)
             return False
         return True
 
@@ -309,7 +309,7 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
             if time.time() - item["time"] < self.expiration_time:
                 self.cache.move_to_end(key)
                 return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
-            await logger.ainfo(f"Cache item for key '{key}' has expired and will be deleted.")
+            logger.info(f"Cache item for key '{key}' has expired and will be deleted.")
             await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
 

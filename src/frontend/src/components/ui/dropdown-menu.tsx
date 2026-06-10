@@ -55,19 +55,11 @@ const DropdownMenuSubContent = React.forwardRef<
 DropdownMenuSubContent.displayName =
   DropdownMenuPrimitive.SubContent.displayName;
 
-/**
- * `container` is an optional portal target. When omitted (undefined), the
- * dropdown portals to document.body — identical to the original behaviour.
- * Pass a DOM element to confine the portal to a specific stacking context
- * (e.g. a full-screen overlay panel).
- */
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> & {
-    container?: HTMLElement | null;
-  }
->(({ className, sideOffset = 4, container, ...props }, ref) => (
-  <DropdownMenuPrimitive.Portal container={container}>
+  React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
+>(({ className, sideOffset = 4, ...props }, ref) => (
+  <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
       ref={ref}
       sideOffset={sideOffset}

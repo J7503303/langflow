@@ -11,7 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useTranslation } from "react-i18next";
+import { SAVED_HOVER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -25,7 +25,6 @@ import { swatchColors } from "@/utils/styleUtils";
 import { cn, getNumberFromString } from "@/utils/utils";
 
 export const MenuBar = memo((): JSX.Element => {
-  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const saveLoading = useFlowsManagerStore((state) => state.saveLoading);
   const [openSettings, setOpenSettings] = useState(false);
@@ -73,7 +72,6 @@ export const MenuBar = memo((): JSX.Element => {
   );
 
   const handleSave = () => {
-    if (!onFlowPage) return;
     saveFlow().then(() => {
       setSuccessData({ title: "Saved successfully" });
     });
@@ -142,6 +140,7 @@ export const MenuBar = memo((): JSX.Element => {
               >
                 {currentFlowName || "Untitled Flow"}
               </span>
+
               <IconComponent
                 name="pencil"
                 className={cn(
@@ -160,7 +159,7 @@ export const MenuBar = memo((): JSX.Element => {
                     ? saveLoading
                       ? "Saving..."
                       : "Save Changes"
-                    : t("flow.savedHover") +
+                    : SAVED_HOVER +
                       (updatedAt
                         ? new Date(updatedAt).toLocaleString("en-US", {
                             hour: "numeric",
@@ -196,6 +195,7 @@ export const MenuBar = memo((): JSX.Element => {
         align="center"
         sideOffset={15}
       >
+        <span className="text-sm font-semibold">Flow Details</span>
         <FlowSettingsComponent
           close={() => setOpenSettings(false)}
           open={openSettings}

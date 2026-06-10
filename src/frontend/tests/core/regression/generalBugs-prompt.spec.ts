@@ -1,7 +1,6 @@
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -21,11 +20,11 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+    await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
 
-    await adjustScreenView(page);
+    await page.getByTestId("fit_view").click();
 
     let outdatedComponents = await page.getByTestId("update-button").count();
 
@@ -34,7 +33,7 @@ test(
       outdatedComponents = await page.getByTestId("update-button").count();
     }
 
-    await page.getByTestId("button_open_prompt_modal").click();
+    await page.getByTestId("promptarea_prompt_template").click();
 
     await page.keyboard.press(`ControlOrMeta+a`);
     await page.keyboard.press("Backspace");

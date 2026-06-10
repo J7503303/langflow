@@ -1,8 +1,6 @@
-import { expect, test } from "../../fixtures";
+import { expect, test } from "@playwright/test";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "User must be able to stop building from inside Playground",
@@ -19,12 +17,12 @@ test(
       },
     );
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+    await page.waitForSelector('[data-testid="zoom_out"]', {
       timeout: 3000,
     });
 
     await page.getByTestId("sidebar-custom-component-button").click();
-    await adjustScreenView(page);
+    await page.getByTitle("fit view").click();
 
     await page.getByTestId("sidebar-search-input").click();
     await page.waitForTimeout(500);
@@ -87,7 +85,10 @@ class CustomComponent(Component):
     await page.locator("textarea").fill(waitTimeoutCode);
 
     await page.getByText("Check & Save").last().click();
-    await adjustScreenView(page, { numberOfZoomOut: 2 });
+
+    await page.getByTestId("fit_view").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
 
     //connection 1
     const elementCustomComponentOutput = await page

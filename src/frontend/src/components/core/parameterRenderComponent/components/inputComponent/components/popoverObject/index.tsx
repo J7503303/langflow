@@ -1,5 +1,4 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
-import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -40,22 +39,12 @@ const CustomInputPopoverObject = ({
   optionsButton,
   handleKeyDown,
   showOptions,
-  inspectionPanel,
 }) => {
-  const [cursor, setCursor] = useState<number | null>(null);
-
-  const PopoverContentInput =
-    editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
-
-  // Restore cursor position after value changes
-  useEffect(() => {
-    if (cursor !== null && refInput.current) {
-      refInput.current.setSelectionRange(cursor, cursor);
-    }
-  }, [cursor, value]);
+  const PopoverContentInput = editNode
+    ? PopoverContent
+    : PopoverContentWithoutPortal;
 
   const handleInputChange = (e) => {
-    setCursor(e.target.selectionStart);
     onChange && onChange(e.target.value);
   };
 
@@ -104,7 +93,6 @@ const CustomInputPopoverObject = ({
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refInput?.current?.clientWidth ?? "200px" }}
         side="bottom"
-        avoidCollisions={inspectionPanel || editNode}
         align="center"
       >
         <Command

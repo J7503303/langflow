@@ -3,20 +3,24 @@ import os
 from pathlib import Path
 from uuid import UUID, uuid4
 
-import aiofiles
-from lfx.graph import Graph
-from lfx.graph.vertex.param_handler import ParameterHandler
-from lfx.log.logger import configure, logger
-from lfx.utils.util import update_settings
+from aiofile import async_open
+from loguru import logger
 from sqlmodel import delete, select, text
 
 from langflow.api.utils import cascade_delete_flow
+from langflow.graph import Graph
+from langflow.graph.vertex.param_handler import ParameterHandler
 from langflow.load.utils import replace_tweaks_with_env
+from langflow.logging.logger import configure
 from langflow.processing.process import process_tweaks, run_graph
+from langflow.services.auth.utils import (
+    get_password_hash,
+)
 from langflow.services.cache.service import AsyncBaseCacheService
 from langflow.services.database.models import Flow, User, Variable
 from langflow.services.database.utils import initialize_database
-from langflow.services.deps import get_auth_service, get_cache_service, get_storage_service, session_scope
+from langflow.services.deps import get_cache_service, get_storage_service, session_scope
+from langflow.utils.util import update_settings
 
 
 class LangflowRunnerExperimental:
@@ -44,6 +48,7 @@ class LangflowRunnerExperimental:
         log_file: str | None = None,
         log_rotation: str | None = None,
         disable_logs: bool = False,
+        async_log_file: bool = True,
     ):
         self.should_initialize_db = should_initialize_db
         log_file_path = Path(log_file) if log_file else None
@@ -52,6 +57,7 @@ class LangflowRunnerExperimental:
             log_file=log_file_path,
             log_rotation=log_rotation,
             disable=disable_logs,
+            async_file=async_log_file,
         )
 
     async def run(
@@ -70,7 +76,7 @@ class LangflowRunnerExperimental:
         tweaks_values: dict | None = None,
     ):
         try:
-            await logger.ainfo(f"Start Handling {session_id=}")
+            logger.info(f"Start Handling {session_id=}")
             await self.init_db_if_needed()
             # Update settings with cache and components path
             await update_settings(cache=cache)
@@ -112,7 +118,7 @@ class LangflowRunnerExperimental:
             result = await self.run_graph(input_value, input_type, output_type, session_id, graph, stream=stream)
         finally:
             await self.clear_flow_state(flow_dict)
-        await logger.ainfo(f"Finish Handling {session_id=}")
+        logger.info(f"Finish Handling {session_id=}")
         return result
 
     async def prepare_flow_and_add_to_db(
@@ -166,10 +172,9 @@ class LangflowRunnerExperimental:
     async def generate_user(self) -> User:
         async with session_scope() as session:
             user_id = str(uuid4())
-            hashed = get_auth_service().get_password_hash(str(uuid4()))
-            user = User(id=user_id, username=user_id, password=hashed, is_active=True)
+            user = User(id=user_id, username=user_id, password=get_password_hash(str(uuid4())), is_active=True)
             session.add(user)
-            await session.flush()
+            await session.commit()
             await session.refresh(user)
             return user
 
@@ -180,6 +185,7 @@ class LangflowRunnerExperimental:
                 name=flow_dict.get("name"), id=UUID(flow_dict["id"]), data=flow_dict.get("data", {}), user_id=user_id
             )
             session.add(flow_db)
+            await session.commit()
 
     @staticmethod
     async def run_graph(
@@ -236,10 +242,10 @@ class LangflowRunnerExperimental:
 
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
-            await logger.ainfo("Initializing database...")
+            logger.info("Initializing database...")
             await initialize_database(fix_migration=True)
             self.should_initialize_db = False
-            await logger.ainfo("Database initialized.")
+            logger.info("Database initialized.")
 
     @staticmethod
     async def database_exists_check():
@@ -248,13 +254,13 @@ class LangflowRunnerExperimental:
                 result = await session.exec(text("SELECT version_num FROM public.alembic_version"))
                 return result.first() is not None
             except Exception as e:  # noqa: BLE001
-                await logger.adebug(f"Database check failed: {e}")
+                logger.debug(f"Database check failed: {e}")
                 return False
 
     @staticmethod
     async def get_flow_dict(flow: Path | str | dict) -> dict:
         if isinstance(flow, str | Path):
-            async with aiofiles.open(Path(flow), encoding="utf-8") as f:
+            async with async_open(Path(flow), encoding="utf-8") as f:
                 content = await f.read()
                 return json.loads(content)
         # If input is a dictionary, assume it's a JSON object

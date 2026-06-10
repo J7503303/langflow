@@ -1,13 +1,5 @@
-import { type Page } from "@playwright/test";
-import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { expect, type Page, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
-} from "../../utils/open-advanced-options";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -34,10 +26,10 @@ test(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await adjustScreenView(page);
+    await page.getByTestId("fit_view").click();
 
     await page.getByTestId("title-OpenAI").click();
-    await page.getByTestId("code-button-modal").last().click();
+    await page.getByTestId("code-button-modal").click();
 
     const cleanCode = await extractAndCleanCode(page);
 
@@ -61,8 +53,8 @@ test(
     );
 
     newCode = newCode.replace(
-      `from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput`,
-      `from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput, QueryInput`,
+      `from langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput`,
+      `from langflow.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput, QueryInput`,
     );
 
     // make sure codes are different
@@ -71,7 +63,8 @@ test(
     await page.keyboard.press("Backspace");
     await page.locator("textarea").last().fill(newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await adjustScreenView(page);
+
+    await page.getByTestId("fit_view").click();
 
     await page
       .getByTestId("query_query_openai_api_base")
@@ -96,9 +89,7 @@ test(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IS A NEW VALUE");
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
+    await page.getByTestId("edit-button-modal").click();
 
     expect(
       await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
@@ -120,13 +111,11 @@ test(
       await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
 
-    await closeAdvancedOptions(page);
+    await page.getByText("Close").last().click();
 
     expect(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
-
-    await enableInspectPanel(page);
   },
 );
 

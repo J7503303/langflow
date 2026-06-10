@@ -1,9 +1,8 @@
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { selectGptModel } from "../../utils/select-gpt-model";
 
 test.skip(
   "TextInputOutputComponent",
@@ -50,11 +49,11 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle!.waitFor({
+    await visibleElementHandle.waitFor({
       state: "visible",
       timeout: 30000,
     });
-    await visibleElementHandle!.hover();
+    await visibleElementHandle.hover();
     await page.mouse.down();
     for (const element of elementsTextInputOutput) {
       if (await element.isVisible()) {
@@ -62,12 +61,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle!.waitFor({
+    await visibleElementHandle.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Move to the second element
-    await visibleElementHandle!.hover();
+    await visibleElementHandle.hover();
     // Release the mouse
     await page.mouse.up();
     await page.getByTestId("sidebar-search-input").click();
@@ -77,8 +76,15 @@ test.skip(
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
-    await adjustScreenView(page, { numberOfZoomOut: 6 });
-
+    await page.waitForSelector('[data-testid="fit_view"]', {
+      timeout: 100000,
+    });
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
+    await page.getByTestId("zoom_out").click();
     const elementsOpenAiOutput = await page
       .getByTestId("handle-openaimodel-shownode-text-right")
       .all();
@@ -88,12 +94,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle!.waitFor({
+    await visibleElementHandle.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Click and hold on the first element
-    await visibleElementHandle!.hover();
+    await visibleElementHandle.hover();
     await page.mouse.down();
     const elementTextOutputInput = await page
       .getByTestId("handle-textoutput-shownode-inputs-left")
@@ -104,12 +110,12 @@ test.skip(
         break;
       }
     }
-    await visibleElementHandle!.waitFor({
+    await visibleElementHandle.waitFor({
       state: "visible",
       timeout: 30000,
     });
     // Move to the second element
-    await visibleElementHandle!.hover();
+    await visibleElementHandle.hover();
     // Release the mouse
     await page.mouse.up();
     await page
@@ -133,8 +139,8 @@ test.skip(
     if (isApiKeyInputVisible) {
       await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
     }
-    await selectGptModel(page);
-
+    await page.getByTestId("dropdown_str_model_name").click();
+    await page.getByTestId("gpt-4o-1-option").click();
     await page.waitForTimeout(1000);
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.getByTestId("button_run_text_output").click();

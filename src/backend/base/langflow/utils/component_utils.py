@@ -43,27 +43,17 @@ def get_fields(build_config: dotdict, fields: list[str] | None = None) -> dict[s
 
 
 def update_input_types(build_config: dotdict) -> dotdict:
-    """Update input types for all fields in build_config.
-
-    For model type fields, sets input_types based on model_type:
-    - "embedding" -> ["Embeddings"]
-    - "language" (default) -> ["LanguageModel"]
-    """
+    """Update input types for all fields in build_config."""
     for key, value in build_config.items():
         if isinstance(value, dict):
-            # For model type fields, set input_types based on model_type
-            if value.get("type") == "model":
-                if not value.get("input_types"):
-                    model_type = value.get("model_type", "language")
-                    value["input_types"] = ["Embeddings"] if model_type == "embedding" else ["LanguageModel"]
-            elif value.get("input_types") is None:
+            if value.get("input_types") is None:
                 build_config[key]["input_types"] = []
         elif hasattr(value, "input_types") and value.input_types is None:
             value.input_types = []
     return build_config
 
 
-def set_field_display(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:  # noqa: FBT001
+def set_field_display(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:
     """Set whether a field should be displayed in the UI."""
     if field in build_config and isinstance(build_config[field], dict) and "show" in build_config[field]:
         build_config[field]["show"] = value
@@ -73,21 +63,20 @@ def set_field_display(build_config: dotdict, field: str, value: bool | None = No
 def set_multiple_field_display(
     build_config: dotdict,
     fields: dict[str, bool] | None = None,
-    *,
     value: bool | None = None,
     field_list: list[str] | None = None,
 ) -> dotdict:
     """Set display property for multiple fields at once."""
     if fields is not None:
         for field, visibility in fields.items():
-            build_config = set_field_display(build_config, field, value=visibility)
+            build_config = set_field_display(build_config, field, visibility)
     elif field_list is not None:
         for field in field_list:
-            build_config = set_field_display(build_config, field, value=value)
+            build_config = set_field_display(build_config, field, value)
     return build_config
 
 
-def set_field_advanced(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:  # noqa: FBT001
+def set_field_advanced(build_config: dotdict, field: str, value: bool | None = None) -> dotdict:
     """Set whether a field is considered 'advanced' in the UI."""
     if value is None:
         value = False
@@ -99,17 +88,16 @@ def set_field_advanced(build_config: dotdict, field: str, value: bool | None = N
 def set_multiple_field_advanced(
     build_config: dotdict,
     fields: dict[str, bool] | None = None,
-    *,
     value: bool | None = None,
     field_list: list[str] | None = None,
 ) -> dotdict:
     """Set advanced property for multiple fields at once."""
     if fields is not None:
         for field, advanced in fields.items():
-            build_config = set_field_advanced(build_config, field, value=advanced)
+            build_config = set_field_advanced(build_config, field, advanced)
     elif field_list is not None:
         for field in field_list:
-            build_config = set_field_advanced(build_config, field, value=value)
+            build_config = set_field_advanced(build_config, field, value)
     return build_config
 
 
@@ -132,7 +120,6 @@ def set_current_fields(
     selected_action: str | None = None,
     default_fields: list[str] = DEFAULT_FIELDS,
     func: Callable[[dotdict, str, bool], dotdict] = set_field_display,
-    *,
     default_value: bool | None = None,
 ) -> dotdict:
     """Set the current fields for a selected action."""

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from lfx.log.logger import logger
+from loguru import logger
 from typing_extensions import override
 
 from langflow.schema.data import Data
@@ -17,9 +17,9 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain_core.callbacks.base import BaseCallbackHandler
-    from lfx.graph.vertex.base import Vertex
+    from langchain.callbacks.base import BaseCallbackHandler
 
+    from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 

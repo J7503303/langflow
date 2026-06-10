@@ -24,7 +24,7 @@ export function useIsMobile({ maxWidth }: { maxWidth?: number } = {}) {
 
     return () => {
       mql.removeEventListener("change", handleResize);
-      window.removeEventListener("resize", handleResize);
+      window.addEventListener("resize", handleResize);
     };
   }, [breakpoint]);
 

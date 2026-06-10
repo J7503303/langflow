@@ -51,7 +51,6 @@ export type InputComponentType = {
   commandWidth?: string;
   blockAddNewGlobalVariable?: boolean;
   hasRefreshButton?: boolean;
-  inspectionPanel?: boolean;
 };
 export type DropDownComponent = {
   disabled?: boolean;
@@ -63,21 +62,12 @@ export type DropDownComponent = {
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
   optionsMetaData?: any[];
-  onSelect: (
-    value: string,
-    dbValue?: boolean,
-    snapshot?: boolean,
-    selectedMetadata?: any,
-  ) => void;
+  onSelect: (value: string, dbValue?: boolean, snapshot?: boolean) => void;
   editNode?: boolean;
   id?: string;
   children?: ReactNode;
   name: string;
-  dialogInputs?: {
-    fields: { data: { node: APIClassType } };
-    functionality: string;
-  };
-  externalOptions?: any;
+  dialogInputs?: any;
   toggle?: boolean;
 };
 export type ParameterComponentType = {
@@ -108,7 +98,6 @@ export type NodeOutputFieldComponentType = {
   data: NodeDataType;
   title: string;
   id: sourceHandleType;
-  loopInputId?: sourceHandleType;
   colors: string[];
   tooltipTitle: string | undefined;
   showNode: boolean;
@@ -141,8 +130,6 @@ export type NodeInputFieldComponentType = {
   showNode: boolean;
   colorName?: string[];
   isToolMode?: boolean;
-  isPrimaryInput?: boolean;
-  displayHandle?: boolean;
 };
 
 export type IOJSONInputComponentType = {
@@ -302,7 +289,6 @@ export type TextHighlightType = {
 
 export interface IVarHighlightType {
   name: string;
-  addCurlyBraces?: boolean;
 }
 
 export type IconComponentProps = {
@@ -411,7 +397,6 @@ export type ConfirmationModalType = {
     | "small-h-full"
     | "medium-h-full";
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
-  onOpenAutoFocus?: (e: Event) => void;
 };
 
 export type UserManagementType = {
@@ -642,21 +627,18 @@ export type codeAreaModalPropsType = {
   open?: boolean;
   setOpen?: (open: boolean) => void;
   componentId?: string;
-  size?: string;
 };
 
 export type chatMessagePropsType = {
   chat: ChatMessageType;
   lastMessage: boolean;
-  updateChat?: (
+  updateChat: (
     chat: ChatMessageType,
     message: string,
     stream_url?: string,
   ) => void;
   closeChat?: () => void;
   playgroundPage?: boolean;
-  isThinking?: boolean;
-  thinkingDuration?: number | null;
 };
 
 export type genericModalPropsType = {

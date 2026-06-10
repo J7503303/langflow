@@ -1,8 +1,10 @@
+import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
-import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
@@ -26,13 +28,11 @@ withEventDeliveryModes(
       .getByRole("heading", { name: "Financial Report Parser" })
       .click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+    await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
 
     await initialGPTsetup(page);
-
-    await page.getByText("Parser", { exact: true }).last().click();
 
     await page.getByTestId("tab_1_stringify").click();
 
@@ -45,12 +45,7 @@ withEventDeliveryModes(
     await page.getByTestId("button-send").click();
 
     try {
-      // Wait for the flow building indicator to appear and then disappear
-      await page.waitForSelector('[data-testid="stop_building_button"]', {
-        timeout: 30000,
-        state: "visible",
-      });
-      await page.waitForSelector('[data-testid="stop_building_button"]', {
+      await page.waitForSelector('[data-testid="button-stop"]', {
         timeout: 180000,
         state: "hidden",
       });
@@ -59,12 +54,9 @@ withEventDeliveryModes(
       test.skip(true, "Timeout error");
     }
 
-    // Wait for the chat response to appear
-    await page.waitForSelector('[data-testid="div-chat-message"]', {
-      timeout: 30000,
-    });
+    await page.waitForSelector(".markdown", { timeout: 3000 });
     const textContents = await page
-      .getByTestId("div-chat-message")
+      .locator(".markdown")
       .last()
       .allTextContents();
     const concatAllText = textContents.join(" ").toLowerCase();

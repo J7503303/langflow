@@ -5,7 +5,7 @@ slug: /bundles-ollama
 
 import Icon from "@site/src/components/icon";
 
-<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+[Bundles](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
 This page describes the components that are available in the **Ollama** bundle.
 
@@ -28,15 +28,11 @@ To use the **Ollama** component in a flow, connect Langflow to your locally runn
 
     To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
 
-    :::tip
-    Large models require significant system memory to run locally. If you see an error like `model requires more system memory than is available`, your machine does not have enough RAM to load the selected model. Try selecting a smaller model, or run Ollama on a machine with more available memory.
-    :::
-
-4. Optional: To configure additional parameters, such as temperature or max tokens, click the component to open the [component inspection panel](/concepts-components#component-menus).
+4. Optional: To configure additional parameters, such as temperature or max tokens, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 
 5. Connect the **Ollama** component to other components in the flow, depending on how you want to use the model.
 
-    Language model components can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)). Use the **Language Model** output when you want to use an Ollama model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component. For more information, see [Language model components](/components-models).
+    **Language Model** components can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)). Use the **Language Model** output when you want to use an Ollama model as the LLM for another LLM-driven component, such as a **Language Model** or **Smart Function** component. For more information, see [**Language Model** components](/components-models).
 
     In the following example, the flow uses `LanguageModel` output to use an Ollama model as the LLM for an [**Agent** component](/components-agents).
 
@@ -59,11 +55,11 @@ To use this component in a flow, connect Langflow to your locally running Ollama
 
     To refresh the server's list of models, click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh**.
 
-4. Optional: To configure additional parameters, such as temperature or max tokens, click the component to open the [component inspection panel](/concepts-components#component-menus).
+4. Optional: To configure additional parameters, such as temperature or max tokens, click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
 Available parameters depend on the selected model.
 
 5. Connect the **Ollama Embeddings** component to other components in the flow.
-For more information about using embedding model components in flows, see [Embedding model components](/components-embedding-models).
+For more information about using embedding model components in flows, see [**Embedding Model** components](/components-embedding-models).
 
     This example connects the **Ollama Embeddings** component to generate embeddings for text chunks extracted from a PDF file, and then stores the embeddings and chunks in a Chroma DB vector store.
 

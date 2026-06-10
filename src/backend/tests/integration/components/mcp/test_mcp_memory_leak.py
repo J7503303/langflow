@@ -13,14 +13,11 @@ import time
 
 import psutil
 import pytest
-from lfx.base.mcp.util import MCPSessionManager
-from lfx.log.logger import logger
+from langflow.base.mcp.util import MCPSessionManager
+from loguru import logger
 from mcp import StdioServerParameters
 
-pytestmark = [
-    pytest.mark.timeout(300, method="thread"),
-    pytest.mark.skip(reason="Skipping all MCP memory leak integration tests for now."),
-]
+pytestmark = pytest.mark.timeout(300, method="thread")
 
 
 async def wait_tools(session, t=20):

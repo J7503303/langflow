@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
-import { getBaseUrl } from "@/customization/utils/urls";
 import { ForwardedIconComponent } from "../../../../../../components/common/genericIconComponent";
+import { BASE_URL_API } from "../../../../../../constants/constants";
 import type { fileCardPropsType } from "../../../../../../types/components";
 import formatFileName from "../utils/format-file-name";
 import getClasses from "../utils/get-classes";
@@ -29,8 +29,7 @@ export default function FileCard({
 
   const fileWrapperClasses = getClasses(isHovered);
 
-  // Use direct URL like in v1.7.2 - the server handles authentication via cookies
-  const imgSrc = `${getBaseUrl()}files/images/${path}`;
+  const imgSrc = `${BASE_URL_API}files/images/${path}`;
 
   if (showFile) {
     if (imgTypes.has(fileType)) {
@@ -46,7 +45,6 @@ export default function FileCard({
               src={imgSrc}
               alt="generated image"
               className="m-0 h-auto w-auto rounded-lg border border-border p-0 transition-all"
-              crossOrigin="use-credentials"
             />
             <DownloadButton
               isHovered={isHovered}

@@ -1,4 +1,4 @@
-from lfx.log.logger import logger
+from loguru import logger
 
 
 def get_memory_key(langchain_object):

@@ -34,7 +34,6 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
   freezePath: "mod+shift+f",
   toolMode: "mod+shift+m",
   toggleSidebar: "mod+b",
-  aiAssistant: "a",
   searchComponentsSidebar: "/",
   updateUniqueShortcut: (name, combination) => {
     set({
@@ -51,7 +50,7 @@ export const useShortcutsStore = create<shortcutsStoreType>((set, get) => ({
           [shortcutName]: shortcut,
         });
       });
-      get().setShortcuts(savedArr);
+      get().setShortcuts(JSON.parse(savedShortcuts!));
     }
   },
 }));

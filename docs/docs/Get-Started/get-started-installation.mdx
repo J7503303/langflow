@@ -5,36 +5,26 @@ slug: /get-started-installation
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import Cards from "@site/src/components/Cards";
-import Card from "@site/src/components/Card";
-import Icon from "@site/src/components/icon";
 
-Langflow can be installed in multiple ways. Choose an option below to jump to the steps.
+Langflow can be installed in multiple ways:
 
-<Cards cols={2}>
-  <Card icon={<Icon name="Monitor" size={20} />} title="Langflow Desktop (recommended)" href="#install-and-run-langflow-desktop">
-    Standalone app with dependency management and simple upgrades.
-  </Card>
-  <Card icon={<Icon name="Container" size={20} />} title="Docker" href="#install-and-run-langflow-docker">
-    Run Langflow in a container in isolation.
-  </Card>
-  <Card icon={<Icon name="Package" size={20} />} title="Python package" href="#install-and-run-the-langflow-oss-python-package">
-    Full control over environment, dependencies, and versioning.
-  </Card>
-  <Card icon={<Icon name="GitFork" size={20} />} title="Install from source" href="/contributing-how-to-contribute#install-langflow-from-source">
-    Contribute to Langflow or work from a local clone.
-  </Card>
-</Cards>
+* [**Langflow Desktop (Recommended)**](#install-and-run-langflow-desktop): Download and install the standalone desktop application for the least complicated setup experience.
+This option includes dependency management and facilitated upgrades.
 
-## Install and run Langflow Desktop {#install-and-run-langflow-desktop}
+* [**Docker**](#install-and-run-langflow-docker): Pull and run the Langflow Docker image to start a Langflow container and run Langflow in isolation.
+
+* [**Python package**](#install-and-run-the-langflow-oss-python-package): Install and run the Langflow OSS Python package.
+This option offers more control over the environment, dependencies, and versioning.
+
+* [**Install from source**](/contributing-how-to-contribute#install-langflow-from-source): Use this option if you want to contribute to the Langflow codebase or documentation.
+
+## Install and run Langflow Desktop
 
 Langflow Desktop is a desktop version of Langflow that simplifies dependency management and upgrades.
-However, some features aren't available for Langflow Desktop, such as the **Shareable Playground** and **Voice Mode**.
+However, some features aren't available for Langflow Desktop, such as the **Shareable Playground**.
 
 <Tabs>
 <TabItem value="macos" label="macOS" default>
-
-Langflow Desktop requires macOS 13 or later.
 
 1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
 2. Click **Download Langflow**, enter your contact information, and then click **Download**.
@@ -44,17 +34,12 @@ Langflow Desktop requires macOS 13 or later.
 </TabItem>
 <TabItem value="Windows" label="Windows">
 
-    :::warning
-    If you are upgrading Langflow Desktop on Windows, **don't** use the in-app update feature to upgrade to Langflow version 1.6.0.
-    For more information, see [Known issues for 1.6.0](/release-notes#windows-desktop-update-issue).
-    :::
-
 1. Navigate to [Langflow Desktop](https://www.langflow.org/desktop).
 2. Click **Download Langflow**, enter your contact information, and then click **Download**.
 3. Open the **File Explorer**, and then navigate to **Downloads**.
 4. Double-click the downloaded `.msi` file, and then use the install wizard to install Langflow Desktop.
 
-    :::tip
+    :::important
     Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system. If you receive a `C++ Build Tools Required!` error, follow the on-screen prompt to install Microsoft C++ Build Tools, or [install Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
     :::
 
@@ -84,7 +69,7 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 
 4. Create your first flow with the [Quickstart](/get-started-quickstart).
 
-## Install and run the Langflow OSS Python package {#install-and-run-the-langflow-oss-python-package}
+## Install and run the Langflow OSS Python package
 
 1. Make sure you have the required dependencies and infrastructure:
 
@@ -95,8 +80,6 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     - Sufficient infrastructure:
        - Minimum: Dual-core CPU and 2 GB RAM
        - Recommended: Multi-core CPU and at least 4 GB RAM
-    - Browser:
-       - Google Chrome is recommended but not required
 
 2. Create a virtual environment with [uv](https://docs.astral.sh/uv/pip/environments).
 
@@ -179,7 +162,7 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     uv pip install langflow
     ```
 
-    To install a specific version of the Langflow package, add the required version to the command, such as `uv pip install langflow==1.4.22`.
+    To install a specific version of the Langflow package by adding the required version to the command, such as `uv pip install langflow==1.4.22`.
 
     <details>
     <summary>Reinstall or upgrade Langflow</summary>

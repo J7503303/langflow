@@ -2,7 +2,6 @@ import react from "@vitejs/plugin-react-swc";
 import * as dotenv from "dotenv";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
-import istanbul from "vite-plugin-istanbul";
 import svgr from "vite-plugin-svgr";
 import tsconfigPaths from "vite-tsconfig-paths";
 import {
@@ -44,30 +43,21 @@ export default defineConfig(({ mode }) => {
       outDir: "build",
     },
     define: {
-      "import.meta.env.BACKEND_URL": JSON.stringify(
+      "process.env.BACKEND_URL": JSON.stringify(
         envLangflow.BACKEND_URL ?? "http://localhost:7860",
       ),
-      "import.meta.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
+      "process.env.ACCESS_TOKEN_EXPIRE_SECONDS": JSON.stringify(
         envLangflow.ACCESS_TOKEN_EXPIRE_SECONDS ?? 60,
       ),
-      "import.meta.env.CI": JSON.stringify(envLangflow.CI ?? false),
-      "import.meta.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
+      "process.env.CI": JSON.stringify(envLangflow.CI ?? false),
+      "process.env.LANGFLOW_AUTO_LOGIN": JSON.stringify(
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
       ),
-      "import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(
-        envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
+      "process.env.LANGFLOW_FEATURE_MCP_COMPOSER": JSON.stringify(
+        envLangflow.LANGFLOW_FEATURE_MCP_COMPOSER ?? "false",
       ),
     },
-    plugins: [
-      react(),
-      svgr(),
-      tsconfigPaths(),
-      istanbul({
-        include: "src/**/*",
-        extension: [".ts", ".tsx", ".js", ".jsx"],
-        requireEnv: false,
-      }),
-    ],
+    plugins: [react(), svgr(), tsconfigPaths()],
     server: {
       port: port,
       proxy: {

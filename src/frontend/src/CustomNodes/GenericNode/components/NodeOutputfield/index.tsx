@@ -27,7 +27,6 @@ import {
   scapedJSONStringfy,
   scapeJSONParse,
 } from "../../../../utils/reactflowUtils";
-import { nodeColorsName } from "../../../../utils/styleUtils";
 import {
   cn,
   logFirstMessage,
@@ -48,8 +47,9 @@ const _EyeIcon = memo(
     />
   ),
 );
+
 const SnowflakeIcon = memo(() => (
-  <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
+  <IconComponent className="h-5 w-5 text-ice" name="Snowflake" />
 ));
 
 const InspectButton = memo(
@@ -111,7 +111,6 @@ function NodeOutputField({
   data,
   title,
   id,
-  loopInputId,
   colors,
   tooltipTitle,
   showNode,
@@ -162,9 +161,7 @@ function NodeOutputField({
     () => ({
       displayOutputPreview:
         !!flowPool[flowPoolId] &&
-        (logHasMessage(flowPoolNode?.data, internalOutputName) ||
-          (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) >
-            0),
+        logHasMessage(flowPoolNode?.data, internalOutputName),
       unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
       errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
     }),
@@ -172,17 +169,10 @@ function NodeOutputField({
   );
 
   const emptyOutput = useMemo(() => {
-    const hasLogs =
-      (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) > 0;
-    if (hasLogs) return false;
-    return Object.keys(flowPoolNode?.data?.outputs ?? {}).every(
+    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
       (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
     );
-  }, [
-    flowPoolNode?.data?.outputs,
-    flowPoolNode?.data?.logs,
-    internalOutputName,
-  ]);
+  }, [flowPoolNode?.data?.outputs]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
@@ -280,50 +270,27 @@ function NodeOutputField({
   const outputInspection = useShortcutsStore((state) => state.outputInspection);
   useHotkeys(outputInspection, handleOpenOutputModal, { preventDefault: true });
 
-  // Create separate colors for loop input (left handle)
-  // Derive colors from loop_types dynamically instead of hardcoding
-  const loopInputColorName = useMemo(() => {
-    if (data.node?.outputs![index].allows_loop) {
-      const output = data.node?.outputs![index];
-      const loopTypeColors =
-        output.loop_types
-          ?.map((type) => nodeColorsName[type] ?? nodeColorsName.unknown)
-          .filter((color) => color) ?? [];
-
-      if (loopTypeColors.length > 0) {
-        // Combine original color with loop type colors, removing duplicates
-        const combinedColors = colorName
-          ? [...colorName, ...loopTypeColors]
-          : loopTypeColors;
-        return Array.from(new Set(combinedColors));
-      }
-    }
-    return colorName;
-  }, [colorName, data.node?.outputs, index]);
-
   const LoopHandle = useMemo(() => {
     if (data.node?.outputs![index].allows_loop) {
       return (
         <HandleRenderComponent
           left={true}
           tooltipTitle={tooltipTitle}
-          id={loopInputId}
+          id={id}
           title={title}
           nodeId={data.id}
           myData={myData}
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${
-            showNode ? "shownode" : "noshownode"
-          }`}
-          colorName={loopInputColorName}
+          testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+          colorName={colorName}
         />
       );
     }
   }, [
     tooltipTitle,
-    loopInputId,
+    id,
     title,
     data.id,
     myData,
@@ -331,7 +298,7 @@ function NodeOutputField({
     setFilterEdge,
     showNode,
     data?.type,
-    loopInputColorName,
+    colorName,
   ]);
 
   const Handle = useMemo(
@@ -346,14 +313,8 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${
-          showNode ? "shownode" : "noshownode"
-        }`}
-        colorName={
-          data.node?.outputs?.[index].allows_loop
-            ? loopInputColorName
-            : colorName
-        }
+        testIdComplement={`${data?.type?.toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
+        colorName={colorName}
       />
     ),
     [
@@ -367,16 +328,11 @@ function NodeOutputField({
       showNode,
       data?.type,
       colorName,
-      data.node?.outputs?.[index].allows_loop,
-      loopInputColorName,
-      index,
     ],
   );
 
   const disabledInspectButton =
     !displayOutputPreview || unknownOutput || emptyOutput;
-
-  const memoizedType = useMemo(() => type?.split("|") ?? [], [type]);
 
   if (!showHiddenOutputs && hidden) return <></>;
   if (!showNode) return <>{Handle}</>;
@@ -401,7 +357,7 @@ function NodeOutputField({
         </div>
 
         {data.node?.frozen && (
-          <div data-testid="frozen-icon">
+          <div className="pr-1" data-testid="frozen-icon">
             <SnowflakeIcon />
           </div>
         )}
@@ -412,7 +368,7 @@ function NodeOutputField({
               proxy={outputProxy}
               outputs={outputs}
               idx={index}
-              types={memoizedType}
+              types={type?.split("|") ?? []}
               selected={
                 data.node?.outputs![index].selected ??
                 data.node?.outputs![index].types[0] ??

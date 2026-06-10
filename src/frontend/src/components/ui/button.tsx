@@ -5,7 +5,7 @@ import { cn } from "../../utils/utils";
 import ForwardedIconComponent from "../common/genericIconComponent";
 
 const buttonVariants = cva(
-  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "noflow nopan nodelete nodrag inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-70 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -57,7 +57,6 @@ export interface ButtonProps
   loading?: boolean;
   unstyled?: boolean;
   ignoreTitleCase?: boolean;
-  shouldScale?: boolean;
 }
 
 function toTitleCase(text: string) {
@@ -82,7 +81,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       asChild = false,
       children,
       ignoreTitleCase = false,
-      shouldScale = true,
       ...props
     },
     ref,
@@ -92,17 +90,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     if (typeof children === "string") {
       newChildren = ignoreTitleCase ? children : toTitleCase(children);
     }
-    const shouldScaleButton =
-      props["aria-haspopup"] !== "dialog" || shouldScale;
     return (
       <>
         <Comp
           className={
             !unstyled
-              ? cn(
-                  buttonVariants({ variant, size, className }),
-                  shouldScaleButton && "active:scale-[0.97]",
-                )
+              ? buttonVariants({ variant, size, className })
               : cn(className)
           }
           disabled={loading || disabled}

@@ -1,4 +1,4 @@
-import { expect, test } from "../../fixtures";
+import { expect, test } from "@playwright/test";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -32,9 +32,9 @@ test(
     });
 
     // Create random usernames, passwords and flow names for the test
-    const userAName = "user_a_" + crypto.randomUUID().substring(0, 8);
-    const userAPassword = "pass_a_" + crypto.randomUUID().substring(0, 8);
-    const userAFlowName = "flow_a_" + crypto.randomUUID().substring(0, 8);
+    const userAName = "user_a_" + Math.random().toString(36).substring(5);
+    const userAPassword = "pass_a_" + Math.random().toString(36).substring(5);
+    const userAFlowName = "flow_a_" + Math.random().toString(36).substring(5);
 
     // Log in as admin and create test user
     await page.goto("/");
@@ -109,9 +109,7 @@ test(
       timeout: 3000,
     });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 30000,
-    });
+    await page.waitForSelector('[data-testid="fit_view"]', { timeout: 30000 });
 
     await renameFlow(page, { flowName: userAFlowName });
 

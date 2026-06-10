@@ -1,5 +1,4 @@
-import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { renameFlow } from "../../utils/rename-flow";
 
@@ -21,12 +20,11 @@ test(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
-
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+    await page.waitForSelector('[data-testid="fit_view"]', {
       timeout: 100000,
     });
 
-    await adjustScreenView(page);
+    await page.getByTestId("fit_view").click();
 
     await renameFlow(page, { flowName: randomName });
 
